@@ -5,7 +5,7 @@ from app.config import settings
 
 # Async engine using asyncpg driver
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.async_database_url,
     echo=False,
     pool_size=5,
     max_overflow=10,

@@ -8,6 +8,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/qr_reviews"
 
+    @property
+    def async_database_url(self) -> str:
+        # Heroku gives us postgres:// but asyncpg needs postgresql+asyncpg://
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif self.DATABASE_URL.startswith("postgresql://"):
+            return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.DATABASE_URL
+
     # Google Gemini AI
     GEMINI_API_KEY: str = ""
 
