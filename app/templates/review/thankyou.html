@@ -1,0 +1,22 @@
+<!-- HTMX partial: Thank you screen -->
+<!-- Shown after posting / sending private note -->
+<section class="screen" id="screen-thanks">
+  <div class="thanks-icon">
+    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+  </div>
+  <p class="thanks-title">All set</p>
+  <p class="thanks-sub" id="thanksSub">
+    {% if rating is defined and rating <= 2 %}
+    Thanks for the honest feedback — it goes straight to the owner.
+    {% else %}
+    Thanks for taking the time — see you again soon.
+    {% endif %}
+  </p>
+
+  <div class="stamp-strip">
+    <span class="mini-stamp on">✓ {{ rating }}★ rated</span>
+    <span class="mini-stamp on">✓ drafted</span>
+    <span class="mini-stamp {{ 'on' if posted else '' }}">{{ '✓ ' if posted else '' }}posted</span>
+    <span class="mini-stamp {{ 'on' if noted else '' }}">{{ '✓ ' if noted else '' }}private note sent</span>
+  </div>
+</section>

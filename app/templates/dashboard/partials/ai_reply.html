@@ -1,0 +1,46 @@
+<!-- HTMX partial: AI Reply options for a review -->
+<div class="ai-reply-box fade-in">
+  <p class="chip-label" style="margin-bottom:12px;">AI Reply Suggestions</p>
+
+  {% for key, label in [("warm", "🤝 Warm"), ("short", "⚡ Short")] %}
+  {% if replies.get(key) %}
+  <div class="ai-reply-option">
+    <div class="ai-reply-label">{{ label }}</div>
+    <div class="ai-reply-text" id="reply-{{ review_id }}-{{ key }}">{{ replies[key] }}</div>
+    <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-{{ key }}')">
+      Copy
+    </button>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% if rating >= 4 and replies.get("seo_rich") %}
+  <div class="ai-reply-option">
+    <div class="ai-reply-label">🔍 SEO-Rich</div>
+    <div class="ai-reply-text" id="reply-{{ review_id }}-seo">{{ replies.seo_rich }}</div>
+    <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-seo')">
+      Copy
+    </button>
+  </div>
+  {% elif rating < 4 and replies.get("deescalate") %}
+  <div class="ai-reply-option">
+    <div class="ai-reply-label">🕊 De-escalate</div>
+    <div class="ai-reply-text" id="reply-{{ review_id }}-de">{{ replies.deescalate }}</div>
+    <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-de')">
+      Copy
+    </button>
+  </div>
+  {% endif %}
+
+  <p class="hint" style="margin-top:8px;">Copy a reply and paste it on your Google Business Profile.</p>
+</div>
+
+<script>
+function copyReplyText(elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent.trim()).then(function() {
+    showToast('Reply copied!', 'success');
+  });
+}
+</script>

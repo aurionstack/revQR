@@ -1,0 +1,160 @@
+{% extends "dashboard/dash_base.html" %}
+
+{% block title %}Settings — {{ business.name }} — revQR{% endblock %}
+
+
+{% block dash_content %}
+<div class="dash-header">
+  <h1 class="dash-title">Settings</h1>
+  <p class="dash-subtitle">Branding &amp; business configuration</p>
+</div>
+
+<div style="max-width:520px;">
+  <form method="POST" action="/dashboard/settings" enctype="multipart/form-data" id="settingsForm">
+
+    <!-- Logo -->
+    <div class="form-group">
+      <label class="form-label">Business Logo</label>
+      {% if business.logo_url %}
+      <img src="{{ business.logo_url }}" alt="Current logo" class="upload-preview" id="logoPreview" />
+      {% else %}
+      <img src="" alt="" class="upload-preview" id="logoPreview" style="display:none;" />
+      {% endif %}
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📷</div>
+        <p class="upload-text">
+          <b>Click to upload</b> or drag and drop<br />
+          PNG, JPG up to 2MB
+        </p>
+      </div>
+      <input type="file" id="logoFile" name="logo" accept="image/png,image/jpeg,image/webp" style="display:none;" />
+    </div>
+
+    <!-- Business Name -->
+    <div class="form-group">
+      <label class="form-label" for="settingsName">Business Name</label>
+      <input
+        class="form-input"
+        type="text"
+        id="settingsName"
+        name="name"
+        value="{{ business.name }}"
+        required
+        minlength="2"
+        maxlength="255"
+      />
+    </div>
+
+    <!-- Brand Color -->
+    <div class="form-group">
+      <label class="form-label">Brand Color</label>
+      <div class="color-picker-row">
+        <div class="color-preview" id="colorPreview" style="background:{{ business.brand_color }};"></div>
+        <input
+          type="color"
+          id="colorInput"
+          name="brand_color"
+          value="{{ business.brand_color }}"
+          class="color-input"
+        />
+        <span class="color-hex" id="colorHex">{{ business.brand_color }}</span>
+      </div>
+      <p class="form-hint">This color brands your customer-facing review page and QR code.</p>
+    </div>
+
+    <!-- Google Place ID -->
+    <div class="form-group">
+      <label class="form-label" for="settingsPlaceId">Google Place ID</label>
+      <input
+        class="form-input"
+        type="text"
+        id="settingsPlaceId"
+        name="google_place_id"
+        value="{{ business.google_place_id or '' }}"
+        placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
+        maxlength="255"
+      />
+      <p class="form-hint">
+        Required for the "Post on Google" button to work.
+        <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">
+          How to find your Place ID →
+        </a>
+      </p>
+    </div>
+
+    <!-- Phone -->
+    <div class="form-group">
+      <label class="form-label" for="settingsPhone">Phone <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
+      <input
+        class="form-input"
+        type="tel"
+        id="settingsPhone"
+        name="phone"
+        value="{{ business.phone or '' }}"
+        placeholder="+91 98765 43210"
+        maxlength="20"
+      />
+    </div>
+
+    <!-- Custom AI Instructions -->
+    <div class="form-group">
+      <label class="form-label" for="customPrompt">Custom AI Instructions <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
+      <textarea
+        class="form-input"
+        id="customPrompt"
+        name="custom_prompt"
+        rows="3"
+        placeholder="e.g. Mention that we are a family-owned Italian restaurant."
+      >{{ business.custom_prompt or '' }}</textarea>
+      <p class="form-hint">These instructions are secretly given to the AI to help it write better reviews for your business.</p>
+    </div>
+
+    <div class="continue-row">
+      <button type="submit" class="btn btn-primary" id="saveSettingsBtn">
+        Save Changes
+      </button>
+    </div>
+  </form>
+
+  <!-- AI Training Data (Google Scraper) -->
+  <div style="margin-top:48px; padding-top:24px; border-top:1.5px dashed var(--line);">
+    <p class="chip-label" style="margin-bottom:12px;">AI Training Data</p>
+    <div class="hint">
+      <p>We can scrape your existing top Google Reviews to train the AI on what customers love about you (e.g. "famous garlic bread" or "Sarah the bartender").</p>
+      
+      {% if business.scraped_context %}
+        <div style="margin-top:16px; padding:12px; background:var(--paper-deep); border-radius:8px; border:1px solid var(--line);">
+          <p style="font-weight:600; margin-bottom:8px; font-size:14px;">Current Training Context:</p>
+          <pre style="font-family:var(--sans); font-size:13px; white-space:pre-wrap; color:var(--ink-soft); margin:0;">{{ business.scraped_context }}</pre>
+        </div>
+      {% endif %}
+
+      <div style="margin-top:20px;">
+        <button 
+          type="button" 
+          class="btn btn-secondary btn-sm" 
+          hx-post="/dashboard/settings/scrape" 
+          hx-swap="none"
+          hx-indicator="#scrapeIndicator"
+        >
+          Fetch Google Reviews
+        </button>
+        <span id="scrapeIndicator" class="htmx-indicator" style="margin-left:12px; font-size:14px; color:var(--ink-soft);">
+          Fetching (this may take a few seconds)...
+        </span>
+      </div>
+      <p class="form-hint" style="margin-top:8px;">Requires a valid Google Place ID saved above.</p>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div style="margin-top:48px; padding-top:24px; border-top:1.5px dashed var(--line);">
+    <p class="chip-label" style="color:var(--negative); margin-bottom:12px;">Account Info</p>
+    <div class="hint">
+      <p><b>Email:</b> {{ business.email }}</p>
+      <p style="margin-top:4px;"><b>Slug:</b> {{ business.slug }}</p>
+      <p style="margin-top:4px;"><b>Member since:</b> {{ business.created_at.strftime('%B %d, %Y') }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

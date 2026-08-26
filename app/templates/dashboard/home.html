@@ -1,0 +1,121 @@
+{% extends "dashboard/dash_base.html" %}
+
+{% block title %}Dashboard — {{ business.name }} — revQR{% endblock %}
+
+
+{% block dash_content %}
+<div class="dash-header">
+  <h1 class="dash-title">Overview</h1>
+  <p class="dash-subtitle">Your review funnel at a glance</p>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Scans</div>
+    <div class="stat-value">{{ stats.total_scans }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Reviews Generated</div>
+    <div class="stat-value">{{ stats.total_reviews }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Reviews Copied</div>
+    <div class="stat-value">{{ stats.total_copied }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Conversion Rate</div>
+    <div class="stat-value">
+      {{ "%.0f"|format(stats.conversion_rate) if stats.conversion_rate is not none else '—' }}<span class="stat-unit">%</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Avg Rating</div>
+    <div class="stat-value">
+      {{ "%.1f"|format(stats.average_rating) if stats.average_rating is not none else '—' }}<span class="stat-unit">★</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Private Notes</div>
+    <div class="stat-value">{{ stats.total_feedback }}</div>
+  </div>
+</div>
+
+<!-- Scans Chart (CSS-only bars) -->
+{% if chart_data %}
+<div class="chart-receipt">
+  <div class="chart-title">Scans · Last 7 days</div>
+  <div class="chart-bars">
+    {% for day in chart_data %}
+    <div class="chart-bar-col">
+      <div
+        class="chart-bar"
+        style="height: {{ (day.count / chart_max * 100) if chart_max > 0 else 0 }}%;"
+        data-value="{{ day.count }}"
+      ></div>
+      <span class="chart-bar-label">{{ day.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Source Attribution -->
+{% if top_sources %}
+<div class="source-attribution" style="margin-top:24px;">
+  <div class="chart-title">Top Sources</div>
+  <p class="hint" style="margin-bottom:12px;">Who/what is driving the most scans</p>
+  <div class="source-list">
+    {% for source_row in top_sources %}
+    <div class="source-item">
+      <span class="source-name">{{ source_row[0] }}</span>
+      <span class="source-count">{{ source_row[1] }} scans</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Activity -->
+<div class="receipt-table">
+  <div class="receipt-table-head">
+    <div class="receipt-col-sm">Rating</div>
+    <div class="receipt-col">Review</div>
+    <div class="receipt-col-md">Status</div>
+    <div class="receipt-col-md">Time</div>
+  </div>
+
+  {% if recent_reviews %}
+    {% for review in recent_reviews %}
+    <div class="receipt-row">
+      <div class="receipt-col-sm">
+        {% set rating = review.rating %}
+        {% include "components/star_rating.html" %}
+      </div>
+      <div class="receipt-col">
+        <div class="receipt-text">{{ review.generated_text[:80] }}{% if review.generated_text|length > 80 %}…{% endif %}</div>
+      </div>
+      <div class="receipt-col-md">
+        {% if review.copied %}
+        <span class="receipt-badge copied">✓ Copied</span>
+        {% else %}
+        <span class="receipt-badge pending">Pending</span>
+        {% endif %}
+      </div>
+      <div class="receipt-col-md">
+        <span class="receipt-time">{{ review.created_at.strftime('%b %d, %I:%M %p') }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="receipt-empty">
+      <p>No reviews yet. Share your QR code to start collecting reviews!</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

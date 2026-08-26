@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ client.name }} — Super Admin{% endblock %}
+{% block body_class %}page-full{% endblock %}
+
+{% block content %}
+<div class="dash">
+  <aside class="dash-sidebar">
+    <div class="dash-brand">
+      <div class="dash-brand-name">Super Admin</div>
+      <div class="dash-brand-sub">Client Control Center</div>
+    </div>
+    <nav class="dash-nav">
+      <a href="/admin" class="dash-nav-item active">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+        All Clients
+      </a>
+      <a href="/admin/clients/new" class="dash-nav-item">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        + Add New Client
+      </a>
+      <div class="dash-nav-divider"></div>
+      <a href="/dashboard" class="dash-nav-item">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg></span>
+        My Admin Dashboard
+      </a>
+    </nav>
+  </aside>
+
+  <main class="dash-main">
+    <div class="dash-header">
+      <h1 class="dash-title">Edit Client: {{ client.name }}</h1>
+      <p class="dash-subtitle">Update account details, payment status, or reset password</p>
+    </div>
+
+    {% if error %}
+    <div class="flash flash-error" style="margin-bottom:20px;">{{ error }}</div>
+    {% endif %}
+
+    <div class="source-attribution" style="max-width:680px; padding:32px;">
+      <form method="POST" action="/admin/clients/{{ client.id }}/edit">
+        <!-- Business Name -->
+        <div class="wa-input-group" style="margin-bottom:20px;">
+          <label class="wa-label">Business Name *</label>
+          <input
+            type="text"
+            name="name"
+            value="{{ client.name }}"
+            class="wa-input"
+            required
+          />
+        </div>
+
+        <!-- Slug -->
+        <div class="wa-input-group" style="margin-bottom:20px;">
+          <label class="wa-label">Custom Slug (Review URL)</label>
+          <input
+            type="text"
+            name="slug"
+            value="{{ client.slug }}"
+            class="wa-input"
+            required
+          />
+          <p class="hint" style="margin-top:4px;">
+            Review URL: <code>/review/{{ client.slug }}</code>
+          </p>
+        </div>
+
+        <!-- Email & Phone -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div class="wa-input-group">
+            <label class="wa-label">Client Email</label>
+            <input
+              type="email"
+              name="email"
+              value="{{ client.email }}"
+              class="wa-input"
+              required
+            />
+          </div>
+          <div class="wa-input-group">
+            <label class="wa-label">Client Phone</label>
+            <input
+              type="tel"
+              name="phone"
+              value="{{ client.phone or '' }}"
+              class="wa-input"
+            />
+          </div>
+        </div>
+
+        <!-- Brand Color & Google Place ID -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div class="wa-input-group">
+            <label class="wa-label">Brand Color</label>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input
+                type="color"
+                name="brand_color"
+                value="{{ client.brand_color or '#6366f1' }}"
+                style="width:44px; height:42px; padding:2px; border:1.5px solid var(--line); border-radius:8px; cursor:pointer;"
+              />
+              <span class="hint">Accent color</span>
+            </div>
+          </div>
+          <div class="wa-input-group">
+            <label class="wa-label">Google Place ID</label>
+            <input
+              type="text"
+              name="google_place_id"
+              value="{{ client.google_place_id or '' }}"
+              placeholder="ChIJ..."
+              class="wa-input"
+            />
+          </div>
+        </div>
+
+        <!-- Reset Password (optional) -->
+        <div class="wa-input-group" style="margin-bottom:20px;">
+          <label class="wa-label">Reset Password <span class="hint">(Leave blank to keep existing password)</span></label>
+          <input
+            type="text"
+            name="new_password"
+            placeholder="Enter new password if resetting..."
+            class="wa-input"
+          />
+        </div>
+
+        <!-- Payment & Admin Status -->
+        <div style="background:var(--paper-deep); border:1.5px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:28px;">
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-weight:600; font-size:14px;">
+            <input type="checkbox" name="has_paid" value="true" {{ 'checked' if client.has_paid else '' }} style="width:20px; height:20px; cursor:pointer;" />
+            <span>✓ Mark as Paid (Unlocked QR Code &amp; Downloads)</span>
+          </label>
+
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-size:13px; color:var(--ink-soft); margin-top:14px;">
+            <input type="checkbox" name="is_admin" value="true" {{ 'checked' if client.is_admin else '' }} style="width:16px; height:16px; cursor:pointer;" />
+            <span>Super Admin Privileges</span>
+          </label>
+        </div>
+
+        <!-- Submit -->
+        <div style="display:flex; gap:12px; align-items:center;">
+          <button type="submit" class="btn btn-primary" style="padding:14px 32px;">
+            Save Changes
+          </button>
+          <a href="/admin" class="btn btn-secondary" style="text-decoration:none;">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — revQR{% endblock %}
+{% block meta_description %}Log in to your revQR dashboard to manage your business reviews and QR code.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="stage">
+    <main class="ticket">
+      <div class="ticket-head">
+        <p class="eyebrow">Welcome Back</p>
+        <h1 class="biz-name" style="justify-content:center; display:flex;">revQR</h1>
+        <p class="meta-line">LOG IN TO YOUR DASHBOARD</p>
+      </div>
+
+
+      <div class="perf"></div>
+
+      <div class="ticket-body">
+        {% if error %}
+        <div class="flash flash-error">{{ error }}</div>
+        {% endif %}
+
+        {% if success %}
+        <div class="flash flash-success">{{ success }}</div>
+        {% endif %}
+
+        <form method="POST" action="/login" id="loginForm">
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@yourbusiness.com"
+              required
+              maxlength="255"
+              value="{{ form_data.email if form_data else '' }}"
+            />
+          </div>
+
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;">
+              <label class="form-label" for="password" style="margin-bottom:0;">Password</label>
+              <a href="/forgot-password" class="form-hint" style="margin:0; text-decoration:underline; font-size:11.5px;">Forgot Password?</a>
+            </div>
+            <div class="input-wrap">
+              <input
+                class="form-input"
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Your password"
+                required
+              />
+              <button type="button" class="input-toggle" aria-label="Show password">⊙</button>
+            </div>
+          </div>
+
+
+          <div class="continue-row">
+            <button type="submit" class="btn btn-primary" id="loginBtn">
+              Log In
+            </button>
+          </div>
+        </form>
+
+        <div class="private-link-row" style="margin-top:24px;">
+          <a href="/signup" class="btn-ghost">Don't have an account? Sign up →</a>
+        </div>
+      </div>
+
+      <div class="perf" style="margin-top:0;"></div>
+      <div class="ticket-footer">
+        <p class="meta-line">QRREVIEWS.APP</p>
+      </div>
+    </main>
+    <div class="torn-bottom"></div>
+  </div>
+</div>
+{% endblock %}

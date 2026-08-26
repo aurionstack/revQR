@@ -1,0 +1,129 @@
+{% extends "dashboard/dash_base.html" %}
+
+{% block title %}Reviews — {{ business.name }} — revQR{% endblock %}
+
+
+{% block dash_content %}
+<div class="dash-header">
+  <h1 class="dash-title">Reviews</h1>
+  <p class="dash-subtitle">All generated reviews &amp; private notes</p>
+</div>
+
+<!-- Reviews Tab / Notes Tab -->
+<div style="display:flex; gap:8px; margin-bottom:24px;">
+  <a
+    href="/dashboard/reviews"
+    class="btn btn-sm btn-inline {{ 'btn-primary' if tab != 'feedback' else 'btn-secondary' }}"
+    style="text-decoration:none;"
+  >
+    Reviews ({{ total_reviews }})
+  </a>
+  <a
+    href="/dashboard/reviews?tab=feedback"
+    class="btn btn-sm btn-inline {{ 'btn-primary' if tab == 'feedback' else 'btn-secondary' }}"
+    style="text-decoration:none;"
+  >
+    Private Notes ({{ total_feedback }})
+  </a>
+</div>
+
+{% if tab != 'feedback' %}
+<!-- Reviews List -->
+<div class="receipt-table">
+  <div class="receipt-table-head">
+    <div class="receipt-col-sm">Rating</div>
+    <div class="receipt-col">Review Text</div>
+    <div class="receipt-col-sm">Copied</div>
+    <div class="receipt-col-md">Date</div>
+  </div>
+
+  {% if reviews %}
+    {% for review in reviews %}
+    <div class="receipt-row review-expandable">
+      <div class="receipt-col-sm">
+        {% set rating = review.rating %}
+        {% include "components/star_rating.html" %}
+      </div>
+      <div class="receipt-col">
+        <div class="receipt-text" onclick="this.classList.toggle('receipt-text-expanded')">{{ review.generated_text }}</div>
+        {% if review.customer_notes %}
+        <div class="meta-line" style="margin-top:6px;">
+          Notes: {{ review.customer_notes[:60] }}{% if review.customer_notes|length > 60 %}…{% endif %}
+        </div>
+        {% endif %}
+        <!-- AI Reply Button -->
+        <div class="review-actions-row">
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm btn-inline ai-reply-trigger"
+            hx-post="/dashboard/reviews/ai-reply"
+            hx-vals='{"review_id": "{{ review.id }}"}'
+            hx-target="#ai-reply-{{ review.id }}"
+            hx-swap="innerHTML"
+            hx-indicator="#ai-reply-loading-{{ review.id }}"
+          >
+            🤖 AI Reply
+          </button>
+          <span class="htmx-indicator" id="ai-reply-loading-{{ review.id }}" style="font-size:12px; color:var(--ink-faint);">Generating...</span>
+        </div>
+        <div id="ai-reply-{{ review.id }}"></div>
+      </div>
+      <div class="receipt-col-sm">
+        {% if review.copied %}
+        <span class="receipt-badge copied">✓</span>
+        {% else %}
+        <span class="receipt-badge pending">—</span>
+        {% endif %}
+      </div>
+      <div class="receipt-col-md">
+        <span class="receipt-time">{{ review.created_at.strftime('%b %d') }}</span>
+        <br />
+        <span class="receipt-time">{{ review.created_at.strftime('%I:%M %p') }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="receipt-empty">
+      <p>No reviews generated yet.</p>
+    </div>
+  {% endif %}
+</div>
+
+{% else %}
+<!-- Feedback / Private Notes List -->
+<div class="receipt-table">
+  <div class="receipt-table-head">
+    <div class="receipt-col-sm">Rating</div>
+    <div class="receipt-col">Private Note</div>
+    <div class="receipt-col-md">Date</div>
+  </div>
+
+  {% if feedback_items %}
+    {% for fb in feedback_items %}
+    <div class="receipt-row" style="cursor:pointer;" onclick="this.querySelector('.receipt-text').classList.toggle('receipt-text-expanded')">
+      <div class="receipt-col-sm">
+        {% if fb.rating %}
+          {% set rating = fb.rating %}
+          {% include "components/star_rating.html" %}
+        {% else %}
+          <span class="receipt-time">—</span>
+        {% endif %}
+      </div>
+      <div class="receipt-col">
+        <div class="receipt-text">{{ fb.message }}</div>
+      </div>
+      <div class="receipt-col-md">
+        <span class="receipt-time">{{ fb.created_at.strftime('%b %d') }}</span>
+        <br />
+        <span class="receipt-time">{{ fb.created_at.strftime('%I:%M %p') }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="receipt-empty">
+      <p>No private notes received yet.</p>
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

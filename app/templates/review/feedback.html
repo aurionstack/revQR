@@ -1,0 +1,53 @@
+<!-- HTMX partial: Feedback / Notes form -->
+<!-- Returned by POST /review/{slug}/rate -->
+<section class="screen" id="screen-notes">
+  <h2 class="q">What stood out?</h2>
+
+  <p class="chip-label">Tap any that fit — optional</p>
+  <div class="chips" id="chips">
+    {% for chip in chips %}
+    <button type="button" class="chip">{{ chip }}</button>
+    {% endfor %}
+  </div>
+
+  <form
+    hx-post="/review/{{ slug }}/generate"
+    hx-target="#review-stage"
+    hx-swap="innerHTML"
+    hx-indicator="#generating-indicator"
+    id="notesForm"
+  >
+    <input type="hidden" name="rating" value="{{ rating }}" />
+    <input type="hidden" name="scan_id" value="{{ scan_id }}" />
+    <input type="hidden" name="selected_chips" id="chips-value" value="" />
+
+    <textarea
+      id="notesInput"
+      name="customer_notes"
+      placeholder="Anything else you'd add? (optional)"
+      maxlength="500"
+      rows="3"
+    ></textarea>
+
+    <p class="hint" id="notesHint">
+      {% if rating <= 3 %}
+      <b>Be as honest as you like</b> — {{ business_name }} wants to hear it. You'll still be able to post this, and send a private note too.
+      {% else %}
+      This becomes the basis of your review — feel free to add specifics.
+      {% endif %}
+    </p>
+
+    <div class="continue-row">
+      <button type="submit" class="btn btn-primary htmx-hide-on-request" id="toGenBtn">
+        Write my review
+      </button>
+      <!-- Loading state shown during HTMX request -->
+      <div class="htmx-indicator" id="generating-indicator">
+        <div class="printer" style="width:100%;">
+          <div class="slot"></div>
+          <p class="printer-label">Drafting your review<span class="dots"></span></p>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>

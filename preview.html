@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QR Reviews — Frontend Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app/static/css/style.css" />
+<style>
+  /* Preview-only navigation */
+  .preview-nav {
+    position: fixed; top:0; left:0; right:0; z-index:9000;
+    background: #1a1a1a; color:#fff;
+    display:flex; align-items:center; gap:0;
+    font-family: var(--mono); font-size:11px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.3);
+    overflow-x:auto;
+  }
+  .preview-nav button {
+    background:none; border:none; color:#aaa; cursor:pointer;
+    padding:12px 16px; font-family:var(--mono); font-size:11px;
+    letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
+    transition: all .15s ease; border-bottom:2px solid transparent;
+  }
+  .preview-nav button:hover { color:#fff; background:#333; }
+  .preview-nav button.active { color:#fff; border-bottom-color:var(--accent); background:#2a2a2a; }
+  .preview-nav .preview-title {
+    padding:0 16px; color:#666; font-size:10px; letter-spacing:.12em;
+    border-right:1px solid #333; margin-right:4px; flex:none;
+  }
+
+  .preview-page { display:none; }
+  .preview-page.active { display:block; }
+
+  /* Override body for preview */
+  body { padding-top: 42px !important; }
+
+  /* Dashboard override to work without flex parent */
+  .preview-dash-wrap { min-height:100vh; }
+  .preview-dash-wrap .dash { min-height: calc(100vh - 42px); }
+</style>
+</head>
+<body class="page-center">
+
+<!-- Preview Navigation -->
+<div class="preview-nav">
+  <span class="preview-title">QR Reviews Preview</span>
+  <button class="active" onclick="showPage('landing')">Landing</button>
+  <button onclick="showPage('signup')">Signup</button>
+  <button onclick="showPage('login')">Login</button>
+  <button onclick="showPage('review')">Review Flow</button>
+  <button onclick="showPage('dashboard')">Dashboard</button>
+  <button onclick="showPage('reviews')">Reviews</button>
+  <button onclick="showPage('qr-locked')">QR (Locked)</button>
+  <button onclick="showPage('qr-unlocked')">QR (Unlocked)</button>
+  <button onclick="showPage('settings')">Settings</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: MARKETING LANDING
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page active" id="page-landing">
+  <div class="page-full" style="min-height:100vh;">
+    <!-- Nav -->
+    <nav class="landing-nav" style="top:42px;">
+      <div class="landing-nav-inner">
+        <a href="#" class="landing-logo">QR Reviews</a>
+        <div class="landing-nav-links">
+          <a href="#">How It Works</a>
+          <a href="#">Pricing</a>
+          <a href="#" onclick="showPage('login');return false;">Log In</a>
+          <a href="#" class="btn btn-primary btn-sm btn-inline" style="text-decoration:none;" onclick="showPage('signup');return false;">Get Started</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="landing-hero" style="padding-top:140px;">
+      <p class="eyebrow" style="margin-bottom:16px;">For restaurants, cafés, salons &amp; local businesses</p>
+      <h1 class="landing-hero-title">
+        Turn every customer into a<br />
+        <span style="color:var(--accent);">real Google review</span>
+      </h1>
+      <p class="landing-hero-sub">
+        Print a QR code. Customers scan, rate, and get an AI-drafted review they can edit and post — all in 30 seconds.
+      </p>
+      <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <a href="#" class="btn btn-primary btn-inline" style="text-decoration:none; padding:16px 32px;" onclick="showPage('signup');return false;">Create Your QR Code</a>
+        <a href="#" class="btn btn-secondary btn-inline" style="text-decoration:none; padding:16px 32px;">See How It Works</a>
+      </div>
+    </section>
+
+    <!-- Ticket Preview -->
+    <div style="display:flex; justify-content:center; padding:0 16px 60px;">
+      <div class="stage" style="max-width:360px;">
+        <div class="ticket" style="pointer-events:none;">
+          <div class="ticket-head">
+            <p class="eyebrow">Scan Receipt</p>
+            <div class="biz-row">
+              <div class="biz-logo">K&amp;</div>
+              <div class="biz-name">Your Business</div>
+            </div>
+            <p class="meta-line">LIVE PREVIEW</p>
+          </div>
+          <div class="perf"></div>
+          <div style="padding:24px; text-align:center;">
+            <h2 class="q">How was your visit?</h2>
+            <div style="display:flex; justify-content:center; gap:6px; margin-bottom:12px;">
+              <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z" fill="var(--accent)" stroke="var(--accent-deep)" stroke-width="1.6"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z" fill="var(--accent)" stroke="var(--accent-deep)" stroke-width="1.6"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z" fill="var(--accent)" stroke="var(--accent-deep)" stroke-width="1.6"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z" fill="var(--accent)" stroke="var(--accent-deep)" stroke-width="1.6"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z" fill="none" stroke="var(--ink-faint)" stroke-width="1.6"/></svg>
+            </div>
+            <p class="rating-label">Really good</p>
+            <div class="stamp-wrap" style="margin-top:12px;">
+              <div class="stamp show" style="animation:none; opacity:1;">★★★★☆ noted</div>
+            </div>
+          </div>
+          <div class="perf" style="margin-top:0;"></div>
+          <div class="ticket-footer"><p class="meta-line">QRREVIEWS.APP</p></div>
+        </div>
+        <div class="torn-bottom"></div>
+      </div>
+    </div>
+
+    <!-- How It Works -->
+    <section class="landing-section">
+      <p class="landing-section-title">How It Works</p>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">01</div>
+          <h3 class="step-title">Print Your QR Code</h3>
+          <p class="step-desc">Sign up, get a branded QR code instantly. Place it at the counter, on tables, or in receipts.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">02</div>
+          <h3 class="step-title">Customer Scans &amp; Rates</h3>
+          <p class="step-desc">They tap a star rating and jot quick notes. Takes 15 seconds. Works on any phone, no app needed.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">03</div>
+          <h3 class="step-title">AI Drafts, They Post</h3>
+          <p class="step-desc">AI writes a natural review matching their rating. They edit if they want, copy it, and post on Google.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="landing-section" style="text-align:center;">
+      <p class="landing-section-title">Why Businesses Love It</p>
+      <div class="stats-grid" style="max-width:640px; margin:0 auto;">
+        <div class="stat-card">
+          <div class="stat-label">Time to review</div>
+          <div class="stat-value">30<span class="stat-unit">sec</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Customer effort</div>
+          <div class="stat-value">3<span class="stat-unit">taps</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Every rating</div>
+          <div class="stat-value" style="font-size:18px;">1★ to 5★</div>
+          <p class="hint" style="margin-top:4px;">No review gating — Google-compliant.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="landing-section" style="text-align:center;">
+      <p class="landing-section-title">Simple Pricing</p>
+      <div class="qr-display" style="max-width:400px; margin:0 auto;">
+        <p class="eyebrow">One-Time Payment</p>
+        <div class="paywall-price" style="margin:12px 0 4px;"><span class="currency">₹</span>1999</div>
+        <p class="paywall-label">Pay once, use forever</p>
+        <ul class="paywall-features">
+          <li>Branded QR code</li>
+          <li>Unlimited customer scans</li>
+          <li>AI-powered review drafting</li>
+          <li>Business dashboard &amp; analytics</li>
+          <li>PNG &amp; SVG download</li>
+        </ul>
+        <button class="btn btn-accent" style="max-width:280px; margin:0 auto;" onclick="showPage('signup')">Get Started</button>
+      </div>
+    </section>
+
+    <section class="landing-cta">
+      <h2 style="font-size:24px; font-weight:700; margin-bottom:8px;">Ready to get more reviews?</h2>
+      <p style="color:var(--ink-soft); margin-bottom:24px;">Takes 2 minutes to set up. No credit card required to sign up.</p>
+      <button class="btn btn-primary btn-inline" style="padding:16px 40px;" onclick="showPage('signup')">Create Your Account</button>
+    </section>
+
+    <footer class="landing-footer">
+      <p>© 2026 QR Reviews · Built for Indian SMBs</p>
+    </footer>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: SIGNUP
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page" id="page-signup">
+  <div class="container" style="padding-top:20px;">
+    <div class="stage">
+      <main class="ticket">
+        <div class="ticket-head">
+          <p class="eyebrow">New Business</p>
+          <h1 class="biz-name" style="justify-content:center; display:flex;">QR Reviews</h1>
+          <p class="meta-line">CREATE YOUR ACCOUNT</p>
+        </div>
+        <div class="perf"></div>
+        <div class="ticket-body">
+          <form onsubmit="showPage('login');return false;">
+            <div class="form-group">
+              <label class="form-label" for="s-name">Business Name</label>
+              <input class="form-input" type="text" id="s-name" placeholder="e.g. Kaffi & Co." />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="s-email">Email</label>
+              <input class="form-input" type="email" id="s-email" placeholder="you@yourbusiness.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="s-pass">Password</label>
+              <div class="input-wrap">
+                <input class="form-input" type="password" id="s-pass" placeholder="Min 8 characters" />
+                <button type="button" class="input-toggle" aria-label="Show password" onclick="togglePw(this)">⊙</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="s-place">Google Place ID</label>
+              <input class="form-input" type="text" id="s-place" placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4" />
+              <p class="form-hint">Needed to link customers to your Google Reviews page. <a href="#">How to find your Place ID →</a></p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
+              <input class="form-input" type="tel" placeholder="+91 98765 43210" />
+            </div>
+            <div class="continue-row">
+              <button type="submit" class="btn btn-primary">Create Account</button>
+            </div>
+          </form>
+          <div class="private-link-row" style="margin-top:24px;">
+            <a href="#" class="btn-ghost" onclick="showPage('login');return false;">Already have an account? Log in →</a>
+          </div>
+        </div>
+        <div class="perf" style="margin-top:0;"></div>
+        <div class="ticket-footer"><p class="meta-line">QRREVIEWS.APP</p></div>
+      </main>
+      <div class="torn-bottom"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: LOGIN
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page" id="page-login">
+  <div class="container" style="padding-top:20px;">
+    <div class="stage">
+      <main class="ticket">
+        <div class="ticket-head">
+          <p class="eyebrow">Welcome Back</p>
+          <h1 class="biz-name" style="justify-content:center; display:flex;">QR Reviews</h1>
+          <p class="meta-line">LOG IN TO YOUR DASHBOARD</p>
+        </div>
+        <div class="perf"></div>
+        <div class="ticket-body">
+          <form onsubmit="showPage('dashboard');return false;">
+            <div class="form-group">
+              <label class="form-label" for="l-email">Email</label>
+              <input class="form-input" type="email" id="l-email" placeholder="you@yourbusiness.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="l-pass">Password</label>
+              <div class="input-wrap">
+                <input class="form-input" type="password" id="l-pass" placeholder="Your password" />
+                <button type="button" class="input-toggle" aria-label="Show password" onclick="togglePw(this)">⊙</button>
+              </div>
+            </div>
+            <div class="continue-row">
+              <button type="submit" class="btn btn-primary">Log In</button>
+            </div>
+          </form>
+          <div class="private-link-row" style="margin-top:24px;">
+            <a href="#" class="btn-ghost" onclick="showPage('signup');return false;">Don't have an account? Sign up →</a>
+          </div>
+        </div>
+        <div class="perf" style="margin-top:0;"></div>
+        <div class="ticket-footer"><p class="meta-line">QRREVIEWS.APP</p></div>
+      </main>
+      <div class="torn-bottom"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: CUSTOMER REVIEW FLOW (interactive demo)
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page" id="page-review">
+  <div class="container" style="padding-top:20px;">
+    <div class="stage">
+      <main class="ticket">
+        <div class="ticket-head">
+          <p class="eyebrow">Scan Receipt</p>
+          <div class="biz-row">
+            <div class="biz-logo">K&amp;</div>
+            <div class="biz-name">Kaffi &amp; Co.</div>
+          </div>
+          <p class="meta-line">TICKET #4471 · TODAY 2:41 PM</p>
+        </div>
+        <div class="perf"></div>
+        <div id="review-stage">
+          <!-- Screen: Rate -->
+          <section class="screen" id="rs-rate">
+            <h2 class="q">How was your visit?</h2>
+            <div class="stars" id="stars"></div>
+            <p class="rating-label" id="ratingLabel">Tap a star to begin</p>
+            <div class="stamp-wrap"><div class="stamp" id="rateStamp"></div></div>
+            <div class="continue-row">
+              <button class="btn btn-primary" id="toNotesBtn" disabled onclick="showReviewScreen('notes')">Continue</button>
+            </div>
+          </section>
+          <!-- Screen: Notes -->
+          <section class="screen" id="rs-notes" style="display:none;">
+            <h2 class="q">What stood out?</h2>
+            <p class="chip-label">Tap any that fit — optional</p>
+            <div class="chips" id="chips"></div>
+            <textarea id="notesInput" placeholder="Anything else you'd add? (optional)" maxlength="300"></textarea>
+            <p class="hint" id="notesHint"></p>
+            <div class="continue-row">
+              <button class="btn btn-primary" onclick="showReviewScreen('generating')">Write my review</button>
+            </div>
+          </section>
+          <!-- Screen: Generating -->
+          <section class="screen" id="rs-generating" style="display:none;">
+            <div class="printer">
+              <div class="slot"></div>
+              <p class="printer-label">Drafting your review<span class="dots"></span></p>
+            </div>
+          </section>
+          <!-- Screen: Review -->
+          <section class="screen" id="rs-review" style="display:none;">
+            <h2 class="q">Here's your review</h2>
+            <div class="review-box"><textarea id="reviewText" rows="5"></textarea></div>
+            <p class="hint"><b>Edit anything</b> — it's your name on it.</p>
+            <div class="action-row">
+              <button class="btn btn-secondary" onclick="doCopy()">Copy</button>
+              <button class="btn btn-primary" onclick="showReviewScreen('thanks')">Post on Google</button>
+            </div>
+            <span class="copied-tag" id="copiedTag">✓ Copied</span>
+            <div class="private-link-row">
+              <button class="btn-ghost" onclick="showReviewScreen('note')">Also send a private note to Kaffi &amp; Co. →</button>
+            </div>
+            <div class="stamp-strip" style="margin-top:20px;">
+              <span class="mini-stamp on">✓ rated</span>
+              <span class="mini-stamp on">✓ drafted</span>
+              <span class="mini-stamp">posted</span>
+              <span class="mini-stamp">private note</span>
+            </div>
+          </section>
+          <!-- Screen: Private Note -->
+          <section class="screen" id="rs-note" style="display:none;">
+            <h2 class="q">A private note for Kaffi &amp; Co.</h2>
+            <textarea placeholder="Only the business sees this — say as much as you like." rows="5"></textarea>
+            <p class="hint">This doesn't replace your Google review — it goes straight to the owner, in addition.</p>
+            <div class="continue-row">
+              <button class="btn btn-primary" onclick="showReviewScreen('thanks')">Send privately</button>
+            </div>
+            <div class="private-link-row">
+              <button class="btn-ghost" onclick="showReviewScreen('review')">← Back to my review</button>
+            </div>
+          </section>
+          <!-- Screen: Thanks -->
+          <section class="screen" id="rs-thanks" style="display:none;">
+            <div class="thanks-icon">
+              <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <p class="thanks-title">All set</p>
+            <p class="thanks-sub">Thanks for taking the time — see you again soon.</p>
+            <div class="stamp-strip">
+              <span class="mini-stamp on">✓ 4★ rated</span>
+              <span class="mini-stamp on">✓ drafted</span>
+              <span class="mini-stamp on">✓ posted</span>
+              <span class="mini-stamp on">✓ private note sent</span>
+            </div>
+          </section>
+        </div>
+        <div class="perf" style="margin-top:0;"></div>
+        <div class="ticket-footer"><p class="meta-line">KEEP THIS RECEIPT · QRREVIEWS.APP</p></div>
+      </main>
+      <div class="torn-bottom"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: DASHBOARD HOME
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page preview-dash-wrap" id="page-dashboard">
+  <div class="dash">
+    <!-- Sidebar -->
+    <aside class="dash-sidebar">
+      <div class="dash-brand">
+        <div class="dash-brand-name">Kaffi &amp; Co.</div>
+        <div class="dash-brand-sub">Dashboard</div>
+      </div>
+      <nav class="dash-nav">
+        <a href="#" class="dash-nav-item active" onclick="showPage('dashboard');return false;">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M9 22V12h6v10"/></svg></span>
+          Overview
+        </a>
+        <a href="#" class="dash-nav-item" onclick="showPage('reviews');return false;">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></span>
+          Reviews
+        </a>
+        <a href="#" class="dash-nav-item" onclick="showPage('qr-locked');return false;">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM17 14h4v4h-4zM14 17h1v4h-1zM17 20h4v1h-4z"/></svg></span>
+          QR Code
+        </a>
+        <div class="dash-nav-divider"></div>
+        <a href="#" class="dash-nav-item" onclick="showPage('settings');return false;">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+          Settings
+        </a>
+      </nav>
+      <div class="dash-sidebar-footer">
+        <a href="#" class="dash-nav-item" style="padding:0;" onclick="showPage('login');return false;">
+          <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+          Log Out
+        </a>
+      </div>
+    </aside>
+    <main class="dash-main">
+      <div class="dash-header">
+        <h1 class="dash-title">Overview</h1>
+        <p class="dash-subtitle">Your review funnel at a glance</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Scans</div><div class="stat-value">247</div></div>
+        <div class="stat-card"><div class="stat-label">Reviews Generated</div><div class="stat-value">89</div></div>
+        <div class="stat-card"><div class="stat-label">Reviews Copied</div><div class="stat-value">64</div></div>
+        <div class="stat-card"><div class="stat-label">Conversion Rate</div><div class="stat-value">36<span class="stat-unit">%</span></div></div>
+        <div class="stat-card"><div class="stat-label">Avg Rating</div><div class="stat-value">4.2<span class="stat-unit">★</span></div></div>
+        <div class="stat-card"><div class="stat-label">Private Notes</div><div class="stat-value">12</div></div>
+      </div>
+      <div class="chart-receipt">
+        <div class="chart-title">Scans · Last 7 days</div>
+        <div class="chart-bars">
+          <div class="chart-bar-col"><div class="chart-bar" style="height:40%;" data-value="18"></div><span class="chart-bar-label">Mon</span></div>
+          <div class="chart-bar-col"><div class="chart-bar" style="height:65%;" data-value="29"></div><span class="chart-bar-label">Tue</span></div>
+          <div class="chart-bar-col"><div class="chart-bar" style="height:80%;" data-value="36"></div><span class="chart-bar-label">Wed</span></div>
+          <div class="chart-bar-col"><div class="chart-bar" style="height:55%;" data-value="24"></div><span class="chart-bar-label">Thu</span></div>
+          <div class="chart-bar-col"><div class="chart-bar" style="height:100%;" data-value="45"></div><span class="chart-bar-label">Fri</span></div>
+          <div class="chart-bar-col"><div class="chart-bar" style="height:90%;" data-value="41"></div><span class="chart-bar-label">Sat</span></div>
+          <div class="chart-bar-col"><div class="chart-bar" style="height:70%;" data-value="32"></div><span class="chart-bar-label">Sun</span></div>
+        </div>
+      </div>
+      <div class="receipt-table">
+        <div class="receipt-table-head">
+          <div class="receipt-col-sm">Rating</div>
+          <div class="receipt-col">Review</div>
+          <div class="receipt-col-md">Status</div>
+          <div class="receipt-col-md">Time</div>
+        </div>
+        <div class="receipt-row">
+          <div class="receipt-col-sm"><span class="receipt-rating"><span class="star-filled">★★★★★</span></span></div>
+          <div class="receipt-col"><div class="receipt-text">Really enjoyed my visit to Kaffi & Co. Great coffee and the staff were incredibly friendly…</div></div>
+          <div class="receipt-col-md"><span class="receipt-badge copied">✓ Copied</span></div>
+          <div class="receipt-col-md"><span class="receipt-time">Aug 20, 3:12 PM</span></div>
+        </div>
+        <div class="receipt-row">
+          <div class="receipt-col-sm"><span class="receipt-rating"><span class="star-filled">★★★★</span><span class="star-empty">★</span></span></div>
+          <div class="receipt-col"><div class="receipt-text">Good experience overall. The cozy space was nice but service was a bit slow during peak hours…</div></div>
+          <div class="receipt-col-md"><span class="receipt-badge copied">✓ Copied</span></div>
+          <div class="receipt-col-md"><span class="receipt-time">Aug 20, 1:45 PM</span></div>
+        </div>
+        <div class="receipt-row">
+          <div class="receipt-col-sm"><span class="receipt-rating"><span class="star-filled">★★★</span><span class="star-empty">★★</span></span></div>
+          <div class="receipt-col"><div class="receipt-text">Decent visit. Nothing special stood out — the coffee was average and the place could use a cleanup…</div></div>
+          <div class="receipt-col-md"><span class="receipt-badge pending">Pending</span></div>
+          <div class="receipt-col-md"><span class="receipt-time">Aug 19, 6:30 PM</span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: DASHBOARD REVIEWS
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page preview-dash-wrap" id="page-reviews">
+  <div class="dash">
+    <aside class="dash-sidebar">
+      <div class="dash-brand"><div class="dash-brand-name">Kaffi &amp; Co.</div><div class="dash-brand-sub">Dashboard</div></div>
+      <nav class="dash-nav">
+        <a href="#" class="dash-nav-item" onclick="showPage('dashboard');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M9 22V12h6v10"/></svg></span>Overview</a>
+        <a href="#" class="dash-nav-item active" onclick="showPage('reviews');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></span>Reviews</a>
+        <a href="#" class="dash-nav-item" onclick="showPage('qr-locked');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/></svg></span>QR Code</a>
+        <div class="dash-nav-divider"></div>
+        <a href="#" class="dash-nav-item" onclick="showPage('settings');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/></svg></span>Settings</a>
+      </nav>
+    </aside>
+    <main class="dash-main">
+      <div class="dash-header"><h1 class="dash-title">Reviews</h1><p class="dash-subtitle">All generated reviews &amp; private notes</p></div>
+      <div style="display:flex; gap:8px; margin-bottom:24px;">
+        <span class="btn btn-sm btn-inline btn-primary" style="text-decoration:none;">Reviews (89)</span>
+        <span class="btn btn-sm btn-inline btn-secondary" style="text-decoration:none;">Private Notes (12)</span>
+      </div>
+      <div class="receipt-table">
+        <div class="receipt-table-head">
+          <div class="receipt-col-sm">Rating</div><div class="receipt-col">Review Text</div><div class="receipt-col-sm">Copied</div><div class="receipt-col-md">Date</div>
+        </div>
+        <div class="receipt-row"><div class="receipt-col-sm"><span class="receipt-rating"><span class="star-filled">★★★★★</span></span></div><div class="receipt-col"><div class="receipt-text">Absolutely loved the atmosphere at Kaffi & Co. The pour-over was exceptional and the barista took time to explain the beans. Will definitely be coming back!</div><div class="meta-line" style="margin-top:6px;">Notes: amazing coffee, friendly barista, loved the vibe</div></div><div class="receipt-col-sm"><span class="receipt-badge copied">✓</span></div><div class="receipt-col-md"><span class="receipt-time">Aug 20</span><br/><span class="receipt-time">3:12 PM</span></div></div>
+        <div class="receipt-row"><div class="receipt-col-sm"><span class="receipt-rating"><span class="star-filled">★★★★</span><span class="star-empty">★</span></span></div><div class="receipt-col"><div class="receipt-text">Good experience at Kaffi & Co. The cozy space was a highlight. Service was a bit slow but the staff were apologetic and the coffee made up for it.</div></div><div class="receipt-col-sm"><span class="receipt-badge copied">✓</span></div><div class="receipt-col-md"><span class="receipt-time">Aug 20</span><br/><span class="receipt-time">1:45 PM</span></div></div>
+        <div class="receipt-row"><div class="receipt-col-sm"><span class="receipt-rating"><span class="star-filled">★★</span><span class="star-empty">★★★</span></span></div><div class="receipt-col"><div class="receipt-text">Disappointing visit to Kaffi & Co. The order was wrong and it took too long to get sorted. The staff could be more attentive. Hoping this was an off day.</div><div class="meta-line" style="margin-top:6px;">Notes: wrong order, slow, not great</div></div><div class="receipt-col-sm"><span class="receipt-badge pending">—</span></div><div class="receipt-col-md"><span class="receipt-time">Aug 19</span><br/><span class="receipt-time">6:30 PM</span></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: QR LOCKED (paywall)
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page preview-dash-wrap" id="page-qr-locked">
+  <div class="dash">
+    <aside class="dash-sidebar">
+      <div class="dash-brand"><div class="dash-brand-name">Kaffi &amp; Co.</div><div class="dash-brand-sub">Dashboard</div></div>
+      <nav class="dash-nav">
+        <a href="#" class="dash-nav-item" onclick="showPage('dashboard');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M9 22V12h6v10"/></svg></span>Overview</a>
+        <a href="#" class="dash-nav-item" onclick="showPage('reviews');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></span>Reviews</a>
+        <a href="#" class="dash-nav-item active"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/></svg></span>QR Code</a>
+        <div class="dash-nav-divider"></div>
+        <a href="#" class="dash-nav-item" onclick="showPage('settings');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/></svg></span>Settings</a>
+      </nav>
+    </aside>
+    <main class="dash-main">
+      <div class="dash-header"><h1 class="dash-title">Your QR Code</h1><p class="dash-subtitle">Print this and place it where customers can scan</p></div>
+      <div class="qr-display qr-locked">
+        <div class="qr-preview">
+          <svg viewBox="0 0 200 200" width="180" height="180" style="opacity:0.3;">
+            <rect x="20" y="20" width="60" height="60" fill="var(--ink)" rx="4"/>
+            <rect x="120" y="20" width="60" height="60" fill="var(--ink)" rx="4"/>
+            <rect x="20" y="120" width="60" height="60" fill="var(--ink)" rx="4"/>
+            <rect x="90" y="90" width="20" height="20" fill="var(--ink)" rx="2"/>
+            <rect x="120" y="120" width="30" height="30" fill="var(--ink)" rx="3"/>
+            <rect x="160" y="120" width="20" height="20" fill="var(--ink)" rx="2"/>
+            <rect x="120" y="160" width="20" height="20" fill="var(--ink)" rx="2"/>
+            <rect x="160" y="160" width="20" height="20" fill="var(--ink)" rx="2"/>
+          </svg>
+          <svg style="position:absolute; z-index:2; width:48px; height:48px;" viewBox="0 0 24 24">
+            <path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p class="eyebrow" style="margin-top:20px; margin-bottom:4px;">Unlock Your QR Code</p>
+        <div class="paywall">
+          <div class="paywall-price"><span class="currency">₹</span>1999</div>
+          <p class="paywall-label">One-time payment</p>
+          <ul class="paywall-features">
+            <li>Branded QR code with your logo</li>
+            <li>Unlimited customer scans</li>
+            <li>AI-powered review generation</li>
+            <li>Download PNG &amp; SVG</li>
+            <li>Full dashboard analytics</li>
+          </ul>
+          <button class="btn btn-accent" style="max-width:320px; margin:0 auto;" onclick="showPage('qr-unlocked')">Pay &amp; Generate QR</button>
+          <p class="hint" style="text-align:center; margin-top:14px;">Secure payment via Razorpay · UPI, cards, net banking</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: QR UNLOCKED
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page preview-dash-wrap" id="page-qr-unlocked">
+  <div class="dash">
+    <aside class="dash-sidebar">
+      <div class="dash-brand"><div class="dash-brand-name">Kaffi &amp; Co.</div><div class="dash-brand-sub">Dashboard</div></div>
+      <nav class="dash-nav">
+        <a href="#" class="dash-nav-item" onclick="showPage('dashboard');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M9 22V12h6v10"/></svg></span>Overview</a>
+        <a href="#" class="dash-nav-item" onclick="showPage('reviews');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></span>Reviews</a>
+        <a href="#" class="dash-nav-item active"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/></svg></span>QR Code</a>
+        <div class="dash-nav-divider"></div>
+        <a href="#" class="dash-nav-item" onclick="showPage('settings');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/></svg></span>Settings</a>
+      </nav>
+    </aside>
+    <main class="dash-main">
+      <div class="dash-header"><h1 class="dash-title">Your QR Code</h1><p class="dash-subtitle">Print this and place it where customers can scan</p></div>
+      <div class="qr-display">
+        <div class="qr-preview">
+          <!-- Simple SVG QR placeholder -->
+          <svg viewBox="0 0 200 200" width="180" height="180">
+            <rect width="200" height="200" fill="white"/>
+            <rect x="20" y="20" width="60" height="60" fill="var(--ink)" rx="4"/>
+            <rect x="28" y="28" width="44" height="44" fill="white" rx="2"/>
+            <rect x="36" y="36" width="28" height="28" fill="var(--ink)" rx="2"/>
+            <rect x="120" y="20" width="60" height="60" fill="var(--ink)" rx="4"/>
+            <rect x="128" y="28" width="44" height="44" fill="white" rx="2"/>
+            <rect x="136" y="36" width="28" height="28" fill="var(--ink)" rx="2"/>
+            <rect x="20" y="120" width="60" height="60" fill="var(--ink)" rx="4"/>
+            <rect x="28" y="128" width="44" height="44" fill="white" rx="2"/>
+            <rect x="36" y="136" width="28" height="28" fill="var(--ink)" rx="2"/>
+            <rect x="90" y="20" width="10" height="10" fill="var(--ink)"/>
+            <rect x="90" y="40" width="10" height="10" fill="var(--ink)"/>
+            <rect x="90" y="60" width="10" height="10" fill="var(--ink)"/>
+            <rect x="20" y="90" width="10" height="10" fill="var(--ink)"/>
+            <rect x="40" y="90" width="10" height="10" fill="var(--ink)"/>
+            <rect x="60" y="90" width="10" height="10" fill="var(--ink)"/>
+            <rect x="90" y="90" width="20" height="20" fill="var(--ink)" rx="2"/>
+            <rect x="120" y="90" width="10" height="10" fill="var(--ink)"/>
+            <rect x="140" y="90" width="10" height="10" fill="var(--ink)"/>
+            <rect x="170" y="90" width="10" height="10" fill="var(--ink)"/>
+            <rect x="90" y="120" width="10" height="10" fill="var(--ink)"/>
+            <rect x="90" y="140" width="10" height="10" fill="var(--ink)"/>
+            <rect x="90" y="170" width="10" height="10" fill="var(--ink)"/>
+            <rect x="120" y="120" width="30" height="30" fill="var(--ink)" rx="3"/>
+            <rect x="160" y="120" width="20" height="20" fill="var(--ink)" rx="2"/>
+            <rect x="120" y="160" width="20" height="20" fill="var(--ink)" rx="2"/>
+            <rect x="150" y="160" width="10" height="10" fill="var(--ink)"/>
+            <rect x="170" y="160" width="10" height="10" fill="var(--ink)"/>
+            <rect x="160" y="170" width="20" height="10" fill="var(--ink)"/>
+          </svg>
+        </div>
+        <p class="meta-line" style="margin-top:16px;">KAFFI & CO. · KAFFI-CO-A7X</p>
+        <p class="qr-url">https://qrreviews.app/review/kaffi-co-a7x</p>
+        <div class="qr-actions">
+          <button class="btn btn-secondary btn-sm btn-inline">↓ Download PNG</button>
+          <button class="btn btn-secondary btn-sm btn-inline">↓ Download SVG</button>
+        </div>
+        <div style="margin-top:32px; text-align:left;">
+          <p class="chip-label" style="margin-bottom:12px;">Printing Tips</p>
+          <div class="hint" style="margin-top:0;">
+            <p>• Print at <b>300 DPI or higher</b> for best quality</p>
+            <p style="margin-top:4px;">• Recommended size: <b>3×3 inches</b> minimum</p>
+            <p style="margin-top:4px;">• Place near the <b>checkout counter, entrance, or table tents</b></p>
+            <p style="margin-top:4px;">• Make sure there's <b>good lighting</b> — phones need contrast to scan</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     PAGE: SETTINGS
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="preview-page preview-dash-wrap" id="page-settings">
+  <div class="dash">
+    <aside class="dash-sidebar">
+      <div class="dash-brand"><div class="dash-brand-name">Kaffi &amp; Co.</div><div class="dash-brand-sub">Dashboard</div></div>
+      <nav class="dash-nav">
+        <a href="#" class="dash-nav-item" onclick="showPage('dashboard');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M9 22V12h6v10"/></svg></span>Overview</a>
+        <a href="#" class="dash-nav-item" onclick="showPage('reviews');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></span>Reviews</a>
+        <a href="#" class="dash-nav-item" onclick="showPage('qr-locked');return false;"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/></svg></span>QR Code</a>
+        <div class="dash-nav-divider"></div>
+        <a href="#" class="dash-nav-item active"><span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/></svg></span>Settings</a>
+      </nav>
+    </aside>
+    <main class="dash-main">
+      <div class="dash-header"><h1 class="dash-title">Settings</h1><p class="dash-subtitle">Branding &amp; business configuration</p></div>
+      <div style="max-width:520px;">
+        <form onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label">Business Logo</label>
+            <div class="upload-area">
+              <div class="upload-icon">📷</div>
+              <p class="upload-text"><b>Click to upload</b> or drag and drop<br/>PNG, JPG up to 2MB</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Business Name</label>
+            <input class="form-input" type="text" value="Kaffi & Co." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand Color</label>
+            <div class="color-picker-row">
+              <div class="color-preview" style="background:#3A5A78; cursor:pointer;" onclick="document.getElementById('cpick').click()"></div>
+              <input type="color" id="cpick" value="#3A5A78" style="opacity:0;width:0;height:0;position:absolute;" onchange="this.previousElementSibling.style.background=this.value; document.documentElement.style.setProperty('--accent',this.value); this.nextElementSibling.textContent=this.value;" />
+              <span class="color-hex">#3A5A78</span>
+            </div>
+            <p class="form-hint">This color brands your customer-facing review page and QR code.</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Google Place ID</label>
+            <input class="form-input" type="text" value="ChIJN1t_tDeuEmsRUsoyG83frY4" />
+            <p class="form-hint">Required for the "Post on Google" button. <a href="#">How to find your Place ID →</a></p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
+            <input class="form-input" type="tel" value="+91 98765 43210" />
+          </div>
+          <div class="continue-row"><button type="submit" class="btn btn-primary">Save Changes</button></div>
+        </form>
+        <div style="margin-top:48px; padding-top:24px; border-top:1.5px dashed var(--line);">
+          <p class="chip-label" style="color:var(--negative); margin-bottom:12px;">Account Info</p>
+          <div class="hint">
+            <p><b>Email:</b> hello@kaffico.in</p>
+            <p style="margin-top:4px;"><b>Slug:</b> kaffi-co-a7x</p>
+            <p style="margin-top:4px;"><b>Member since:</b> August 15, 2026</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* Page switching */
+function showPage(id) {
+  document.querySelectorAll('.preview-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.preview-nav button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  // Fix body class for dashboard vs centered pages
+  var isDash = ['dashboard','reviews','qr-locked','qr-unlocked','settings'].includes(id);
+  document.body.className = isDash ? 'page-full' : 'page-center';
+  document.body.style.paddingTop = '42px';
+  window.scrollTo(0, 0);
+}
+
+/* Password toggle */
+function togglePw(btn) {
+  var input = btn.parentElement.querySelector('input');
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '⚆'; }
+  else { input.type = 'password'; btn.textContent = '⊙'; }
+}
+
+/* Star rating */
+var STAR_PATH = 'M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z';
+var LABELS = {1:'Rough visit',2:'Not great',3:'It was okay',4:'Really good',5:'Loved it'};
+var CHIPS = {
+  low: ['Slow service','Cold drink','Wrong order','Not clean','Rude staff'],
+  mid: ['Good coffee','A bit slow','Nothing special','Friendly staff'],
+  high:['Great coffee','Friendly staff','Cozy space','Fast service','Would recommend']
+};
+var currentRating = 0;
+
+var starsEl = document.getElementById('stars');
+for (var i=1; i<=5; i++) {
+  var b = document.createElement('button');
+  b.className='star-btn'; b.type='button'; b.dataset.v=i;
+  b.innerHTML='<svg viewBox="0 0 24 24"><path d="'+STAR_PATH+'"/></svg>';
+  b.onclick = function(){ setR(parseInt(this.dataset.v)); };
+  starsEl.appendChild(b);
+}
+
+function setR(r) {
+  currentRating = r;
+  starsEl.querySelectorAll('.star-btn').forEach(function(b,i){ b.classList.toggle('filled', i<r); });
+  document.getElementById('ratingLabel').textContent = LABELS[r];
+  var st = document.getElementById('rateStamp');
+  var s=''; for(var j=0;j<5;j++) s += j<r?'★':'☆';
+  st.textContent = s+' noted';
+  st.classList.remove('show'); void st.offsetWidth; st.classList.add('show');
+  document.getElementById('toNotesBtn').disabled=false;
+  buildChips(r);
+}
+
+function buildChips(r) {
+  var wrap = document.getElementById('chips');
+  var tier = r<=2?'low':(r===3?'mid':'high');
+  wrap.innerHTML='';
+  CHIPS[tier].forEach(function(l){
+    var c=document.createElement('button'); c.className='chip'; c.type='button'; c.textContent=l;
+    c.onclick=function(){c.classList.toggle('selected');};
+    wrap.appendChild(c);
+  });
+  var hint = document.getElementById('notesHint');
+  hint.innerHTML = r<=3
+    ? '<b>Be as honest as you like</b> — Kaffi &amp; Co. wants to hear it.'
+    : 'This becomes the basis of your review — feel free to add specifics.';
+}
+
+/* Review flow screens */
+function showReviewScreen(id) {
+  ['rate','notes','generating','review','note','thanks'].forEach(function(s){
+    document.getElementById('rs-'+s).style.display = 'none';
+  });
+  var el = document.getElementById('rs-'+id);
+  el.style.display = 'block';
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'riseIn .38s cubic-bezier(.22,.9,.36,1)';
+  if (id==='generating') {
+    setTimeout(function(){
+      showReviewScreen('review');
+      typeR();
+    }, 1400);
+  }
+}
+
+function typeR() {
+  var chips = [];
+  document.querySelectorAll('#chips .chip.selected').forEach(function(c){chips.push(c.textContent.toLowerCase());});
+  var notes = document.getElementById('notesInput').value.trim();
+  var review;
+  if (currentRating >= 4) review = 'Really enjoyed my visit to Kaffi & Co.'+(chips.length?' '+chips.join(', ')+' stood out.':'')+(notes?' '+notes:'')+ ' Would definitely come back.';
+  else if (currentRating===3) review='Decent visit to Kaffi & Co.'+(chips.length?' '+chips.join(', ')+'.':'')+(notes?' '+notes:'')+ ' It was fine overall.';
+  else review='Disappointing visit to Kaffi & Co.'+(chips.length?' '+chips.join(', ')+'.':'')+(notes?' '+notes:'')+ ' Hoping this gets sorted out.';
+  var ta = document.getElementById('reviewText');
+  ta.value=''; ta.readOnly=true;
+  var idx=0;
+  var iv=setInterval(function(){
+    ta.value=review.slice(0,idx); idx++;
+    if(idx>review.length){clearInterval(iv); ta.readOnly=false;}
+  },14);
+}
+
+function doCopy(){
+  var v = document.getElementById('reviewText').value;
+  navigator.clipboard&&navigator.clipboard.writeText(v);
+  var t=document.getElementById('copiedTag');
+  t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},1800);
+}
+</script>
+</body>
+</html>

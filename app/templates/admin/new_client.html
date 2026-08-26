@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Client — Super Admin{% endblock %}
+{% block body_class %}page-full{% endblock %}
+
+{% block content %}
+<div class="dash">
+  <aside class="dash-sidebar">
+    <div class="dash-brand">
+      <div class="dash-brand-name">Super Admin</div>
+      <div class="dash-brand-sub">Client Control Center</div>
+    </div>
+    <nav class="dash-nav">
+      <a href="/admin" class="dash-nav-item">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+        All Clients
+      </a>
+      <a href="/admin/clients/new" class="dash-nav-item active">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        + Add New Client
+      </a>
+      <div class="dash-nav-divider"></div>
+      <a href="/dashboard" class="dash-nav-item">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg></span>
+        My Admin Dashboard
+      </a>
+    </nav>
+  </aside>
+
+  <main class="dash-main">
+    <div class="dash-header">
+      <h1 class="dash-title">Add New Client Account</h1>
+      <p class="dash-subtitle">Create account manually for cash/offline onboarding — bypasses Razorpay</p>
+    </div>
+
+    {% if error %}
+    <div class="flash flash-error" style="margin-bottom:20px;">{{ error }}</div>
+    {% endif %}
+
+    <div class="source-attribution" style="max-width:680px; padding:32px;">
+      <form method="POST" action="/admin/clients/new">
+        <!-- Business Name -->
+        <div class="wa-input-group" style="margin-bottom:20px;">
+          <label class="wa-label">Business Name *</label>
+          <input
+            type="text"
+            name="name"
+            id="bizNameInput"
+            placeholder="e.g. Royal Cafe &amp; Bakery"
+            class="wa-input"
+            required
+            oninput="autoSlugify(this.value)"
+          />
+        </div>
+
+        <!-- Slug -->
+        <div class="wa-input-group" style="margin-bottom:20px;">
+          <label class="wa-label">Custom Slug (Review URL)</label>
+          <input
+            type="text"
+            name="slug"
+            id="bizSlugInput"
+            placeholder="e.g. royal-cafe"
+            class="wa-input"
+          />
+          <p class="hint" style="margin-top:4px;">
+            Review page will be: <code>/review/<span id="slugPreview">royal-cafe</span></code>
+          </p>
+        </div>
+
+        <!-- Email & Password -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div class="wa-input-group">
+            <label class="wa-label">Client Email (Login)</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="e.g. owner@royalcafe.com"
+              class="wa-input"
+            />
+          </div>
+          <div class="wa-input-group">
+            <label class="wa-label">Initial Password</label>
+            <input
+              type="text"
+              name="password"
+              placeholder="e.g. Royal123!"
+              class="wa-input"
+            />
+          </div>
+        </div>
+
+        <!-- Phone & Brand Color -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div class="wa-input-group">
+            <label class="wa-label">Client Phone (WhatsApp)</label>
+            <input
+              type="tel"
+              name="phone"
+              placeholder="e.g. 9876543210"
+              class="wa-input"
+            />
+          </div>
+          <div class="wa-input-group">
+            <label class="wa-label">Brand Color</label>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input
+                type="color"
+                name="brand_color"
+                value="#6366f1"
+                style="width:44px; height:42px; padding:2px; border:1.5px solid var(--line); border-radius:8px; cursor:pointer;"
+              />
+              <span class="hint">Accent color for standees &amp; review page</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Google Place ID -->
+        <div class="wa-input-group" style="margin-bottom:24px;">
+          <label class="wa-label">Google Place ID (Optional)</label>
+          <input
+            type="text"
+            name="google_place_id"
+            placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
+            class="wa-input"
+          />
+          <p class="hint" style="margin-top:4px;">
+            Used to fetch authentic past reviews with AI and direct users to the exact Google Review box.
+          </p>
+        </div>
+
+        <!-- Payment & Admin Options (Highlighted Cash Box) -->
+        <div style="background:var(--paper-deep); border:1.5px dashed var(--positive); border-radius:12px; padding:18px 20px; margin-bottom:28px;">
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-weight:600; font-size:14px; color:var(--positive);">
+            <input type="checkbox" name="has_paid" value="true" checked style="width:20px; height:20px; cursor:pointer;" />
+            <span>✓ Mark as Paid (Cash / Offline Payment Collected)</span>
+          </label>
+          <p class="hint" style="margin-top:6px; margin-left:32px;">
+            Checking this immediately unlocks the client's QR code, high-res downloads, and standee generator without them having to pay through Razorpay.
+          </p>
+
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-size:13px; color:var(--ink-soft); margin-top:14px;">
+            <input type="checkbox" name="is_admin" value="true" style="width:16px; height:16px; cursor:pointer;" />
+            <span>Grant Super Admin Privileges to this account</span>
+          </label>
+        </div>
+
+        <!-- Submit -->
+        <div style="display:flex; gap:12px; align-items:center;">
+          <button type="submit" class="btn btn-primary" style="padding:14px 32px;">
+            Create &amp; Unlock Account
+          </button>
+          <a href="/admin" class="btn btn-secondary" style="text-decoration:none;">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script>
+function autoSlugify(text) {
+  var slug = text.toLowerCase().trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  var slugInput = document.getElementById('bizSlugInput');
+  var slugPreview = document.getElementById('slugPreview');
+  if (slugInput && !slugInput.dataset.touched) {
+    slugInput.value = slug;
+    if (slugPreview) slugPreview.textContent = slug || 'your-slug';
+  }
+}
+document.getElementById('bizSlugInput').addEventListener('input', function() {
+  this.dataset.touched = 'true';
+  document.getElementById('slugPreview').textContent = this.value || 'your-slug';
+});
+</script>
+{% endblock %}

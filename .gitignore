@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Uploads (logos — local storage for V1)
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+media/*
+!media/.gitkeep
+
+
+# Tailwind
+node_modules/
+
+# Alembic
+alembic/__pycache__/
+
+# Test & Scratch
+.pytest_cache/
+htmlcov/
+.coverage
+scratch*.py
+

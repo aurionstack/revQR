@@ -1,0 +1,68 @@
+<!-- HTMX partial: AI-generated review display with 3 variations -->
+<!-- Returned by POST /review/{slug}/generate -->
+<section class="screen" id="screen-review">
+  <!-- Hidden state -->
+  <input type="hidden" id="review-id" value="{{ review_id }}" />
+  <input type="hidden" id="variations-data" value='{{ variations_json }}' />
+
+  <h2 class="q">Pick your review style</h2>
+
+  <!-- Variation Tabs -->
+  <div class="variation-tabs">
+    <button type="button" class="variation-tab active" data-style="punchy" onclick="selectVariation('punchy')">
+      ⚡ Short
+    </button>
+    <button type="button" class="variation-tab" data-style="detailed" onclick="selectVariation('detailed')">
+      📝 Detailed
+    </button>
+    <button type="button" class="variation-tab" data-style="warm" onclick="selectVariation('warm')">
+      🌟 Warm
+    </button>
+  </div>
+
+  <div class="review-box">
+    <textarea
+      id="reviewText"
+      rows="5"
+      data-typewriter="true"
+      data-text="{{ variations.punchy }}"
+    >{{ variations.punchy }}</textarea>
+  </div>
+
+  <p class="hint"><b>Edit anything</b> — it's your name on it. Tap a style above to switch.</p>
+
+  <div class="action-row">
+    <button type="button" class="btn btn-secondary" id="copyBtn" onclick="copyReview()">
+      Copy
+    </button>
+    <button
+      type="button"
+      class="btn btn-primary"
+      id="postBtn"
+      onclick="postOnGoogle('{{ google_review_url }}')"
+    >
+      Post on Google
+    </button>
+  </div>
+  <span class="copied-tag" id="copiedTag">✓ Copied</span>
+
+  <div class="private-link-row">
+    <button
+      type="button"
+      class="btn-ghost"
+      hx-get="/review/{{ slug }}/private-note-form?scan_id={{ scan_id }}&review_id={{ review_id }}&rating={{ rating }}"
+      hx-target="#review-stage"
+      hx-swap="innerHTML"
+    >
+      Also send a private note to {{ business_name }} →
+    </button>
+  </div>
+
+  <!-- Stamp strip showing progress -->
+  <div class="stamp-strip" style="margin-top:24px;">
+    <span class="mini-stamp on">✓ {{ rating }}★ rated</span>
+    <span class="mini-stamp on">✓ drafted</span>
+    <span class="mini-stamp">posted</span>
+    <span class="mini-stamp">private note</span>
+  </div>
+</section>

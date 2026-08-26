@@ -1,0 +1,196 @@
+{% extends "dashboard/dash_base.html" %}
+
+{% block title %}QR Code — {{ business.name }} — revQR{% endblock %}
+
+
+{% block dash_content %}
+<div class="dash-header">
+  <h1 class="dash-title">Your QR Code</h1>
+  <p class="dash-subtitle">Print this and place it where customers can scan</p>
+</div>
+
+{% if business.is_admin or business.has_paid %}
+<!-- ═══════════════════════════════════════════════════════════════════════
+     UNLOCKED STATE — QR code is available
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="qr-display" style="max-width:460px; margin:0 auto;">
+  <!-- Custom Location/Table Selector -->
+  <div style="margin-bottom:20px; text-align:left; background:var(--paper-deep); border:1.5px solid var(--line); border-radius:14px; padding:18px; box-shadow:var(--shadow-soft);">
+    <label class="form-label" style="font-size:12px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+      <span>📍</span> Location / Table / Counter Tag <span style="font-weight:normal; opacity:0.65;">(Optional)</span>
+    </label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input
+        type="text"
+        id="qrTagInput"
+        class="form-input"
+        placeholder="e.g. Table 1, Counter A, Bar"
+        style="padding:10px 14px; font-size:13px; flex:1;"
+        oninput="updateCustomQR()"
+      />
+      <button type="button" class="btn btn-secondary btn-sm" style="padding:10px 16px;" onclick="document.getElementById('qrTagInput').value=''; updateCustomQR();">Clear</button>
+    </div>
+    
+    <!-- Color Selector -->
+    <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <span style="font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.5px;">QR Color:</span>
+      <div style="display:flex; gap:8px;" id="qrColorPicker">
+        <button type="button" class="qr-color-btn active" data-color="#000000" style="width:24px; height:24px; border-radius:50%; background:#000000; border:2px solid var(--ink); cursor:pointer;" title="Pitch Black (Recommended)" onclick="selectQRColor('#000000', this)"></button>
+        <button type="button" class="qr-color-btn" data-color="#1e3a8a" style="width:24px; height:24px; border-radius:50%; background:#1e3a8a; border:2px solid transparent; cursor:pointer;" title="Navy Blue" onclick="selectQRColor('#1e3a8a', this)"></button>
+        <button type="button" class="qr-color-btn" data-color="#065f46" style="width:24px; height:24px; border-radius:50%; background:#065f46; border:2px solid transparent; cursor:pointer;" title="Emerald Green" onclick="selectQRColor('#065f46', this)"></button>
+        <button type="button" class="qr-color-btn" data-color="{{ business.brand_color or '#4f46e5' }}" style="width:24px; height:24px; border-radius:50%; background:{{ business.brand_color or '#4f46e5' }}; border:2px solid transparent; cursor:pointer;" title="Brand Color" onclick="selectQRColor('{{ business.brand_color or '#4f46e5' }}', this)"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Card -->
+  <div class="qr-preview" style="background:#ffffff; border-radius:18px; padding:20px; box-shadow:0 12px 32px rgba(0,0,0,0.08); border:1px solid #e4e4e7; max-width:320px; margin:0 auto;">
+    <img
+      src="/qr/{{ business.slug }}.png"
+      alt="QR Code for {{ business.name }}"
+      id="qrImage"
+      style="width:100%; height:auto; display:block; border-radius:8px;"
+    />
+  </div>
+
+  <p class="meta-line" style="margin-top:18px; font-weight:700;" id="qrMetaLine">
+    {{ business.name | upper }} · {{ business.slug | upper }}
+  </p>
+  <p class="qr-url" id="qrUrlDisplay" style="word-break:break-all; font-size:12px; color:var(--ink-soft); margin-top:4px;">{{ app_url }}/review/{{ business.slug }}</p>
+
+  <div class="qr-actions" style="margin-top:18px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+    <a id="qrDownloadPng" href="/qr/{{ business.slug }}.png?download=1" class="btn btn-primary btn-sm btn-inline" style="flex:1; min-width:140px;" download>
+      ↓ Download PNG
+    </a>
+    <a id="qrDownloadSvg" href="/qr/{{ business.slug }}.svg?download=1" class="btn btn-secondary btn-sm btn-inline" style="flex:1; min-width:140px;" download>
+      ↓ Download SVG
+    </a>
+  </div>
+
+  <div style="margin-top:24px;">
+    <a href="/dashboard/standee" class="btn btn-accent btn-sm" style="text-decoration:none; display:inline-block; width:100%; padding:12px; font-weight:600;">
+      ✨ Open Print-Ready Standee & Table-Tent Kit →
+    </a>
+  </div>
+
+
+  <!-- Print instructions -->
+  <div style="margin-top:32px; text-align:left;">
+    <p class="chip-label" style="margin-bottom:12px;">Printing Tips</p>
+    <div class="hint" style="margin-top:0;">
+      <p>• Unique QR: Encoded specifically with your business slug <b>/review/{{ business.slug }}</b></p>
+      <p style="margin-top:4px;">• Brand Badge: Automatically includes your business initial badge in the center</p>
+      <p style="margin-top:4px;">• Print at <b>300 DPI or higher</b> (minimum 3×3 inches)</p>
+      <p style="margin-top:4px;">• Place near the <b>checkout counter, entrance, or dining tables</b></p>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentQrColor = "#000000";
+
+function selectQRColor(color, btn) {
+  currentQrColor = color;
+  document.querySelectorAll('.qr-color-btn').forEach(function(b) {
+    b.style.border = '2px solid transparent';
+  });
+  if (btn) {
+    btn.style.border = '2px solid var(--ink)';
+  }
+  updateCustomQR();
+}
+
+function updateCustomQR() {
+  var input = document.getElementById('qrTagInput');
+  var qrImg = document.getElementById('qrImage');
+  var urlDisplay = document.getElementById('qrUrlDisplay');
+  var metaLine = document.getElementById('qrMetaLine');
+  var dlPng = document.getElementById('qrDownloadPng');
+  var dlSvg = document.getElementById('qrDownloadSvg');
+
+  var baseSlug = "{{ business.slug }}";
+  var bizName = "{{ business.name | upper }}";
+  var baseAppUrl = "{{ app_url }}";
+
+  var val = input ? input.value.trim() : '';
+  var colorParam = '&color=' + encodeURIComponent(currentQrColor);
+  
+  if (val) {
+    var cleanSource = val.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    qrImg.src = '/qr/' + baseSlug + '.png?source=' + encodeURIComponent(cleanSource) + colorParam;
+    urlDisplay.innerText = baseAppUrl + '/review/' + baseSlug + '?source=' + cleanSource;
+    metaLine.innerText = bizName + ' · ' + baseSlug.toUpperCase() + ' · ' + val.toUpperCase();
+    dlPng.href = '/qr/' + baseSlug + '.png?download=1&source=' + encodeURIComponent(cleanSource) + colorParam;
+    dlSvg.href = '/qr/' + baseSlug + '.svg?download=1&source=' + encodeURIComponent(cleanSource) + colorParam;
+  } else {
+    qrImg.src = '/qr/' + baseSlug + '.png?' + colorParam.substring(1);
+    urlDisplay.innerText = baseAppUrl + '/review/' + baseSlug;
+    metaLine.innerText = bizName + ' · ' + baseSlug.toUpperCase();
+    dlPng.href = '/qr/' + baseSlug + '.png?download=1' + colorParam;
+    dlSvg.href = '/qr/' + baseSlug + '.svg?download=1' + colorParam;
+  }
+}
+</script>
+
+
+
+{% else %}
+<!-- ═══════════════════════════════════════════════════════════════════════
+     LOCKED STATE — Payment required
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="qr-display qr-locked">
+  <div class="qr-preview">
+    <!-- Blurred placeholder QR -->
+    <svg viewBox="0 0 200 200" width="180" height="180" style="opacity:0.3;">
+      <rect x="20" y="20" width="60" height="60" fill="var(--ink)" rx="4"/>
+      <rect x="120" y="20" width="60" height="60" fill="var(--ink)" rx="4"/>
+      <rect x="20" y="120" width="60" height="60" fill="var(--ink)" rx="4"/>
+      <rect x="90" y="90" width="20" height="20" fill="var(--ink)" rx="2"/>
+      <rect x="120" y="120" width="30" height="30" fill="var(--ink)" rx="3"/>
+      <rect x="160" y="120" width="20" height="20" fill="var(--ink)" rx="2"/>
+      <rect x="120" y="160" width="20" height="20" fill="var(--ink)" rx="2"/>
+      <rect x="160" y="160" width="20" height="20" fill="var(--ink)" rx="2"/>
+    </svg>
+    <!-- Lock overlay -->
+    <svg class="lock-icon" viewBox="0 0 24 24" style="position:absolute; z-index:2;">
+      <path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <p class="eyebrow" style="margin-top:20px; margin-bottom:4px;">Unlock Your QR Code</p>
+
+  <div class="paywall">
+    <div class="paywall-price">
+      <span class="currency">₹</span>{{ price_display }}
+    </div>
+    <p class="paywall-label">One-time payment</p>
+
+    <ul class="paywall-features">
+      <li>Branded QR code with your logo</li>
+      <li>Unlimited customer scans</li>
+      <li>AI-powered review generation</li>
+      <li>Download PNG &amp; SVG</li>
+      <li>Full dashboard analytics</li>
+    </ul>
+
+    <button
+      type="button"
+      class="btn btn-accent"
+      id="payBtn"
+      onclick="startPayment()"
+      style="max-width:320px; margin:0 auto;"
+    >
+      Pay &amp; Generate QR
+    </button>
+
+    <p class="hint" style="text-align:center; margin-top:14px;">
+      Secure payment via Razorpay · UPI, cards, net banking
+    </p>
+  </div>
+</div>
+
+<!-- Hidden data for Razorpay JS -->
+<input type="hidden" id="razorpay-key" value="{{ razorpay_key }}" />
+{% endif %}
+{% endblock %}

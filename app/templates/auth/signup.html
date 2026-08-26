@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up — revQR{% endblock %}
+{% block meta_description %}Create your revQR account. Get a branded QR code and start collecting AI-powered Google reviews from your customers.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="stage">
+    <main class="ticket">
+      <div class="ticket-head">
+        <p class="eyebrow">Get Started</p>
+        <h1 class="biz-name" style="justify-content:center; display:flex;">revQR</h1>
+        <p class="meta-line">CREATE YOUR BUSINESS ACCOUNT</p>
+      </div>
+
+      <div class="perf"></div>
+
+      <div class="ticket-body">
+        {% if error %}
+        <div class="flash flash-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/signup" id="signupForm">
+          <div class="form-group">
+            <label class="form-label" for="name">Business Name</label>
+            <input
+              class="form-input"
+              type="text"
+              id="name"
+              name="name"
+              placeholder="e.g. Kaffi & Co."
+              required
+              minlength="2"
+              maxlength="255"
+              value="{{ form_data.name if form_data else '' }}"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="email"
+              name="email"
+              placeholder="you@yourbusiness.com"
+              required
+              maxlength="255"
+              value="{{ form_data.email if form_data else '' }}"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <div class="input-wrap">
+              <input
+                class="form-input"
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Min 8 characters"
+                required
+                minlength="8"
+                maxlength="128"
+              />
+              <button type="button" class="input-toggle" aria-label="Show password">⊙</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="google_place_id">Google Place ID</label>
+            <input
+              class="form-input"
+              type="text"
+              id="google_place_id"
+              name="google_place_id"
+              placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
+              maxlength="255"
+              value="{{ form_data.google_place_id if form_data else '' }}"
+            />
+            <p class="form-hint">
+              Needed to link customers to your Google Reviews page.
+              <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">
+                How to find your Place ID →
+              </a>
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="phone">Phone <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
+            <input
+              class="form-input"
+              type="tel"
+              id="phone"
+              name="phone"
+              placeholder="+91 98765 43210"
+              maxlength="20"
+              value="{{ form_data.phone if form_data else '' }}"
+            />
+          </div>
+
+          <div class="continue-row">
+            <button type="submit" class="btn btn-primary" id="signupBtn">
+              Create Account
+            </button>
+          </div>
+        </form>
+
+        <div class="private-link-row" style="margin-top:24px;">
+          <a href="/login" class="btn-ghost">Already have an account? Log in →</a>
+        </div>
+      </div>
+
+      <div class="perf" style="margin-top:0;"></div>
+      <div class="ticket-footer">
+        <p class="meta-line">QRREVIEWS.APP</p>
+      </div>
+    </main>
+    <div class="torn-bottom"></div>
+  </div>
+</div>
+{% endblock %}

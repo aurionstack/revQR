@@ -1,0 +1,237 @@
+{% extends "dashboard/dash_base.html" %}
+
+{% block title %}WhatsApp Review Requests — {{ business.name }} — revQR{% endblock %}
+
+
+{% block dash_content %}
+<div class="dash-header">
+  <h1 class="dash-title">WhatsApp Review Requests</h1>
+  <p class="dash-subtitle">Send customers a review link via WhatsApp in 1 click</p>
+</div>
+
+<!-- Quick Send -->
+<div class="wa-quick-send">
+  <div class="wa-quick-send-inner">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+      <p class="chip-label" style="margin:0;">Quick Send</p>
+      <span class="hint">⚡ Press <kbd style="background:var(--paper-deep); border:1px solid var(--line); border-radius:4px; padding:2px 6px; font-family:var(--mono);">Enter</kbd> to jump to next field &amp; send</span>
+    </div>
+    <div class="wa-quick-row">
+      <div class="wa-input-group">
+        <label class="wa-label">Customer Phone</label>
+        <input type="tel" id="waPhone" class="wa-input" placeholder="91XXXXXXXXXX" maxlength="15" enterkeyhint="next" autofocus />
+      </div>
+      <div class="wa-input-group">
+        <label class="wa-label">Customer Name</label>
+        <input type="text" id="waName" class="wa-input" placeholder="Rahul" maxlength="50" enterkeyhint="next" />
+      </div>
+      <div class="wa-input-group">
+        <label class="wa-label">Staff Name <span class="hint">(optional)</span></label>
+        <input type="text" id="waStaff" class="wa-input" placeholder="e.g. Priya" maxlength="50" enterkeyhint="done" />
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+      <button type="button" id="waQuickSendBtn" class="btn btn-primary btn-sm btn-inline" onclick="sendWhatsApp(0)" style="background:#25D366; border-color:#25D366; color:white; padding:10px 20px;">
+        📲 Send Template 1 (Friendly) via WhatsApp
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="previewTemplate(0)">
+        👁 Preview
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Your Review Link -->
+<div class="wa-link-box">
+  <p class="chip-label">Your Review Link</p>
+  <div class="wa-link-display">
+    <code id="reviewLinkText">{{ review_link }}</code>
+    <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyToClipboard('{{ review_link }}')">Copy</button>
+  </div>
+  <p class="hint" style="margin-top:8px;">
+    Share this link anywhere — WhatsApp, SMS, email, social media. Source tracking: add <code>?source=waiter_name</code> to attribute reviews to specific staff.
+  </p>
+</div>
+
+<!-- Embed templates safely as JSON to preserve emojis and Unicode perfectly -->
+<script id="waTemplatesData" type="application/json">
+{{ wa_templates_json | safe }}
+</script>
+
+<!-- Template Cards -->
+<p class="chip-label" style="margin-top:32px; margin-bottom:16px;">Message Templates — tap to preview & send</p>
+<div class="wa-templates-grid">
+  {% for tpl in wa_templates %}
+  <div class="wa-template-card" data-template-index="{{ loop.index0 }}">
+    <div class="wa-template-header">
+      <span class="wa-template-name">{{ tpl.name }}</span>
+      <span class="wa-template-badge">Template {{ loop.index }}</span>
+    </div>
+    <div class="wa-template-preview">{{ tpl.message[:120] }}{% if tpl.message|length > 120 %}…{% endif %}</div>
+    <div class="wa-template-actions">
+      <button type="button" class="btn btn-secondary btn-sm btn-inline wa-preview-btn" onclick="previewTemplate({{ loop.index0 }})">
+        👁 Preview
+      </button>
+      <button type="button" class="btn btn-primary btn-sm btn-inline wa-send-btn" onclick="sendWhatsApp({{ loop.index0 }})" style="background:#25D366; border-color:#25D366; color:white;">
+        📲 Send via WhatsApp
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Preview Modal -->
+<div class="wa-preview-modal" id="waPreviewModal" style="display:none;">
+  <div class="wa-preview-modal-inner">
+    <div class="wa-preview-chat">
+      <div class="wa-chat-header">
+        <span>📱 WhatsApp Preview</span>
+        <button type="button" onclick="closePreview()" class="wa-close-btn">✕</button>
+      </div>
+      <div class="wa-chat-body">
+        <div class="wa-chat-bubble" id="waPreviewBubble"></div>
+      </div>
+      <div class="wa-chat-footer">
+        <button type="button" class="btn btn-primary btn-sm btn-inline" id="waPreviewSendBtn" style="background:#25D366; border-color:#25D366; color:white; width:100%;">
+          📲 Open in WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Staff Source Links -->
+<div style="margin-top:40px;">
+  <p class="chip-label" style="margin-bottom:12px;">Staff Attribution Links</p>
+  <p class="hint" style="margin-bottom:16px;">
+    Create unique links for each staff member. Track who drives the most reviews.
+  </p>
+  <div class="wa-source-builder">
+    <div class="wa-input-group" style="max-width:300px;">
+      <label class="wa-label">Staff / Table / Source Name</label>
+      <input type="text" id="sourceNameInput" class="wa-input" placeholder="e.g. rahul, table_3, counter" maxlength="50" oninput="updateSourceLink()" enterkeyhint="done" />
+    </div>
+    <div class="wa-link-display" style="margin-top:12px;">
+      <code id="sourceLinkText">{{ review_link }}</code>
+      <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyToClipboard(document.getElementById('sourceLinkText').textContent)">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var reviewLink = '{{ review_link }}';
+  var rawTemplates = [];
+
+  try {
+    var rawJson = document.getElementById('waTemplatesData').textContent;
+    rawTemplates = JSON.parse(rawJson);
+  } catch (e) {
+    console.error('Failed to parse WhatsApp templates JSON:', e);
+  }
+
+  window.copyToClipboard = function(text) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('Copied to clipboard!', 'success');
+    }).catch(function() {
+      showToast('Failed to copy', 'error');
+    });
+  };
+
+  function getCleanPhone() {
+    var raw = document.getElementById('waPhone').value.trim();
+    var clean = raw.replace(/[^0-9]/g, '');
+    if (clean.length === 10) {
+      clean = '91' + clean;
+    }
+    return clean;
+  }
+
+  function getFilledMessage(idx) {
+    var rawMsg = (rawTemplates[idx] && rawTemplates[idx].message) || '';
+    var name = document.getElementById('waName').value.trim() || 'there';
+    var staff = document.getElementById('waStaff').value.trim() || 'our team';
+    var msg = rawMsg.replace(/\{\{name\}\}/g, name).replace(/\{\{staff_name\}\}/g, staff);
+    return msg;
+  }
+
+  window.previewTemplate = function(idx) {
+    var filled = getFilledMessage(idx);
+    document.getElementById('waPreviewBubble').textContent = filled;
+    document.getElementById('waPreviewModal').style.display = 'flex';
+
+    var cleanPhone = getCleanPhone();
+    document.getElementById('waPreviewSendBtn').onclick = function() {
+      var url = 'https://api.whatsapp.com/send?phone=' + cleanPhone + '&text=' + encodeURIComponent(filled);
+      window.open(url, '_blank');
+    };
+  };
+
+  window.closePreview = function() {
+    document.getElementById('waPreviewModal').style.display = 'none';
+  };
+
+  window.sendWhatsApp = function(idx) {
+    var filled = getFilledMessage(idx);
+    var cleanPhone = getCleanPhone();
+    var url = 'https://api.whatsapp.com/send?phone=' + cleanPhone + '&text=' + encodeURIComponent(filled);
+    window.open(url, '_blank');
+  };
+
+  window.updateSourceLink = function() {
+    var src = document.getElementById('sourceNameInput').value.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    var link = src ? (reviewLink + '?source=' + src) : reviewLink;
+    document.getElementById('sourceLinkText').textContent = link;
+  };
+
+  // Dedicated Enter-key chaining for Quick Send fields
+  var waPhone = document.getElementById('waPhone');
+  var waName = document.getElementById('waName');
+  var waStaff = document.getElementById('waStaff');
+  var sourceNameInput = document.getElementById('sourceNameInput');
+
+  if (waPhone) {
+    waPhone.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (waName) {
+          waName.focus();
+          waName.select();
+        }
+      }
+    });
+  }
+
+  if (waName) {
+    waName.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (waStaff) {
+          waStaff.focus();
+          waStaff.select();
+        }
+      }
+    });
+  }
+
+  if (waStaff) {
+    waStaff.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendWhatsApp(0);
+      }
+    });
+  }
+
+  if (sourceNameInput) {
+    sourceNameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        updateSourceLink();
+        copyToClipboard(document.getElementById('sourceLinkText').textContent);
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

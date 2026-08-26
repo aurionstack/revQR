@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Review {{ business.name }} — revQR{% endblock %}
+
+{% block meta_description %}Share your experience at {{ business.name }} — rate, review, and post to Google in 30 seconds.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Hidden state for JS -->
+  <input type="hidden" id="biz-slug" value="{{ business.slug }}" />
+
+  <div class="stage">
+    <main class="ticket" id="ticket">
+      <div class="ticket-head">
+        <p class="eyebrow">Scan Receipt</p>
+        <div class="biz-row">
+          {% if business.logo_url %}
+          <div class="biz-logo">
+            <img src="{{ business.logo_url }}" alt="{{ business.name }} logo" />
+          </div>
+          {% else %}
+          <div class="biz-logo">{{ business.name[:2] | upper }}</div>
+          {% endif %}
+          <div class="biz-name">{{ business.name }}</div>
+        </div>
+        <p class="meta-line">TICKET #{{ scan_id[:4] | upper if scan_id else '0000' }} · {{ now.strftime('%b %d, %I:%M %p') | upper if now else 'TODAY' }}</p>
+      </div>
+
+      <div class="perf"></div>
+
+      <!-- HTMX swap target — all screens load here -->
+      <div id="review-stage">
+        <!-- Screen 1: Star Rating (inline, not a partial) -->
+        <section class="screen" id="screen-rate">
+          <h2 class="q">How was your visit?</h2>
+
+          <div class="stars" id="stars">
+            <!-- Stars built by JS -->
+          </div>
+          <p class="rating-label" id="ratingLabel">Tap a star to begin</p>
+
+          <div class="stamp-wrap">
+            <div class="stamp" id="rateStamp"></div>
+          </div>
+
+          <form
+            hx-post="/review/{{ business.slug }}/rate"
+            hx-target="#review-stage"
+            hx-swap="innerHTML"
+            id="rateForm"
+          >
+            <input type="hidden" name="rating" id="rating-value" value="" />
+            <input type="hidden" name="scan_id" value="{{ scan_id }}" />
+            <div class="continue-row">
+              <button type="submit" class="btn btn-primary" id="toNotesBtn" disabled>
+                Continue
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <div class="perf" style="margin-top:0;"></div>
+      <div class="ticket-footer">
+        <p class="meta-line">KEEP THIS RECEIPT · QRREVIEWS.APP</p>
+      </div>
+    </main>
+    <div class="torn-bottom"></div>
+  </div>
+</div>
+{% endblock %}

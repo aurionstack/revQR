@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Super Admin Portal — revQR{% endblock %}
+
+{% block body_class %}page-full{% endblock %}
+
+{% block content %}
+<div class="dash-mobile-nav">
+  <div style="display:flex; align-items:center; justify-content:space-between;">
+    <div>
+      <div class="dash-brand-name">Super Admin Portal</div>
+      <div class="dash-brand-sub">{{ admin.name }}</div>
+    </div>
+    <a href="/dashboard" class="btn btn-secondary btn-sm btn-inline" style="text-decoration:none;">
+      My Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="dash">
+  <!-- Sidebar -->
+  <aside class="dash-sidebar">
+    <div class="dash-brand">
+      <div class="dash-brand-name">Super Admin</div>
+      <div class="dash-brand-sub">Client Control Center</div>
+    </div>
+
+    <nav class="dash-nav">
+      <a href="/admin" class="dash-nav-item active">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+        All Clients
+      </a>
+      <a href="/admin/clients/new" class="dash-nav-item">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+        + Add New Client
+      </a>
+      <div class="dash-nav-divider"></div>
+      <a href="/dashboard" class="dash-nav-item">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg></span>
+        My Admin Dashboard
+      </a>
+      <a href="/logout" class="dash-nav-item">
+        <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+        Log Out
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dash-main">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+      <div>
+        <h1 class="dash-title">Client Management</h1>
+        <p class="dash-subtitle">Manually create accounts, collect cash payments &amp; unlock QR codes</p>
+      </div>
+      <a href="/admin/clients/new" class="btn btn-primary btn-inline" style="text-decoration:none; padding:12px 24px;">
+        + Create Client Account (Cash / Manual)
+      </a>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Businesses</div>
+        <div class="stat-value">{{ total_clients }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Paid / Unlocked</div>
+        <div class="stat-value" style="color:var(--positive);">{{ paid_clients }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total QR Scans</div>
+        <div class="stat-value">{{ total_scans }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Reviews</div>
+        <div class="stat-value">{{ total_reviews }}</div>
+      </div>
+    </div>
+
+    <!-- Search / Filter Bar -->
+    <div class="source-attribution" style="margin-top:24px; margin-bottom:24px; padding:16px;">
+      <form method="GET" action="/admin" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <input
+          type="text"
+          name="q"
+          value="{{ search_query }}"
+          placeholder="Search by business name, slug, email, phone..."
+          class="wa-input"
+          style="flex:1; min-width:240px;"
+        />
+        <button type="submit" class="btn btn-primary btn-sm btn-inline">Search</button>
+        {% if search_query %}
+        <a href="/admin" class="btn btn-secondary btn-sm btn-inline" style="text-decoration:none;">Clear</a>
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- Clients Table -->
+    <div class="receipt-table" style="overflow-x:auto;">
+      <div class="receipt-table-head" style="min-width:760px;">
+        <div style="flex:2;">Business &amp; Slug</div>
+        <div style="flex:1.5;">Contact</div>
+        <div style="flex:1; text-align:center;">Payment</div>
+        <div style="flex:1; text-align:center;">Scans / Reviews</div>
+        <div style="flex:2; text-align:right;">Admin Actions</div>
+      </div>
+
+      {% if clients %}
+        {% for item in clients %}
+        {% set biz = item.business %}
+        <div class="receipt-row" style="min-width:760px; align-items:center; padding:16px 20px;">
+          <!-- Business & Slug -->
+          <div style="flex:2;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-weight:700; font-size:15px; color:var(--ink);">{{ biz.name }}</span>
+              {% if biz.is_admin %}
+              <span style="background:var(--ink); color:var(--paper); font-size:10px; padding:2px 8px; border-radius:999px; font-family:var(--mono);">ADMIN</span>
+              {% endif %}
+            </div>
+            <div class="meta-line" style="margin-top:4px;">
+              <code>/review/{{ biz.slug }}</code>
+            </div>
+            <a href="/review/{{ biz.slug }}" target="_blank" class="hint" style="text-decoration:underline; font-size:11px;">
+              Open Public Review Page ↗
+            </a>
+          </div>
+
+          <!-- Contact -->
+          <div style="flex:1.5;">
+            <div style="font-size:13px; color:var(--ink);">{{ biz.email }}</div>
+            {% if biz.phone %}
+            <div style="font-size:12px; color:var(--ink-faint); margin-top:2px;">📞 {{ biz.phone }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Payment Status -->
+          <div style="flex:1; text-align:center;">
+            {% if biz.has_paid or biz.is_admin %}
+            <span class="receipt-badge copied" style="display:inline-block; font-size:11px; padding:4px 10px;">
+              ✓ Paid / Unlocked
+            </span>
+            {% else %}
+            <span class="receipt-badge pending" style="display:inline-block; font-size:11px; padding:4px 10px; background:#fff3cd; color:#856404; border-color:#ffeeba;">
+              🔒 Unpaid
+            </span>
+            {% endif %}
+
+            <form method="POST" action="/admin/clients/{{ biz.id }}/toggle-paid" style="margin-top:6px;">
+              <button type="submit" class="btn btn-secondary btn-sm btn-inline" style="font-size:10px; padding:3px 8px;">
+                {{ "Lock QR" if biz.has_paid else "✓ Mark Paid (Cash)" }}
+              </button>
+            </form>
+          </div>
+
+          <!-- Scans / Reviews -->
+          <div style="flex:1; text-align:center;">
+            <div style="font-family:var(--mono); font-size:13px; font-weight:600; color:var(--ink);">
+              {{ item.scans_count }} <span style="font-size:11px; font-weight:400; color:var(--ink-faint);">scans</span>
+            </div>
+            <div style="font-family:var(--mono); font-size:12px; color:var(--ink-soft); margin-top:2px;">
+              {{ item.reviews_count }} <span style="font-size:11px; color:var(--ink-faint);">reviews</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="flex:2; display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+            <!-- Standee Kit -->
+            <a
+              href="/admin/clients/{{ biz.id }}/standee"
+              class="btn btn-secondary btn-sm btn-inline"
+              title="View & Print Standee for Client"
+              style="text-decoration:none; font-size:11px;"
+            >
+              🖨 Standee
+            </a>
+
+            <!-- Download QR -->
+            <a
+              href="/qr/{{ biz.slug }}.png?download=1"
+              class="btn btn-secondary btn-sm btn-inline"
+              title="Download QR Image"
+              download
+              style="text-decoration:none; font-size:11px;"
+            >
+              📥 QR
+            </a>
+
+            <!-- Impersonate / Open Dashboard -->
+            <form method="POST" action="/admin/clients/{{ biz.id }}/impersonate" style="display:inline;">
+              <button type="submit" class="btn btn-primary btn-sm btn-inline" style="font-size:11px;" title="Open and manage client dashboard">
+                ⚡ Login As
+              </button>
+            </form>
+
+            <!-- Edit -->
+            <a
+              href="/admin/clients/{{ biz.id }}/edit"
+              class="btn btn-secondary btn-sm btn-inline"
+              title="Edit Client"
+              style="text-decoration:none; font-size:11px;"
+            >
+              ✏️
+            </a>
+
+            <!-- Delete (cannot delete self) -->
+            {% if biz.id != admin.id %}
+            <form
+              method="POST"
+              action="/admin/clients/{{ biz.id }}/delete"
+              style="display:inline;"
+              onsubmit="return confirm('Are you sure you want to delete {{ biz.name }}? This cannot be undone.');"
+            >
+              <button type="submit" class="btn btn-secondary btn-sm btn-inline" style="font-size:11px; color:var(--negative); border-color:var(--negative);" title="Delete Client">
+                🗑
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="receipt-empty">
+          <p>No clients found. Click "+ Create Client Account" to add your first client.</p>
+        </div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}

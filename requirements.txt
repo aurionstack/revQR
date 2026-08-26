@@ -1,0 +1,14 @@
+fastapi[all]
+sqlalchemy[asyncio]
+alembic
+asyncpg
+google-genai
+qrcode[pil]
+python-jose[cryptography]
+passlib
+bcrypt==4.0.1
+python-multipart
+python-dotenv
+pydantic-settings
+slowapi
+razorpay

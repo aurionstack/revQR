@@ -1,0 +1,205 @@
+{% extends "dashboard/dash_base.html" %}
+
+{% block title %}Standee Kit — {{ business.name }} — revQR{% endblock %}
+
+
+{% block dash_content %}
+<div class="dash-header">
+  <h1 class="dash-title">Print-Ready Standee Kit</h1>
+  <p class="dash-subtitle">Download a branded review standee for your counter, tables, or entrance</p>
+</div>
+
+{% if business.is_admin or business.has_paid %}
+<!-- Standee Preview & Download -->
+<div class="standee-layout">
+  <!-- Live Preview -->
+  <div class="standee-preview-wrap">
+    <div class="standee-card" id="standeeCard">
+      <!-- Top accent bar -->
+      <div class="standee-accent" style="background:{{ business.brand_color or '#6366f1' }};"></div>
+
+      <!-- Logo & Name -->
+      <div class="standee-header">
+        {% if business.logo_url %}
+        <img src="{{ business.logo_url }}" alt="{{ business.name }}" class="standee-logo" />
+        {% else %}
+        <div class="standee-logo-placeholder" style="background:{{ business.brand_color or '#6366f1' }};">
+          {{ business.name[:2] | upper }}
+        </div>
+        {% endif %}
+        <div class="standee-biz-name">{{ business.name }}</div>
+        <div class="standee-tag" id="standeeTag" style="display:none; margin:6px auto 0; font-size:11px; font-weight:700; color:var(--ink); background:var(--paper-deep); border:1px solid var(--line); border-radius:999px; padding:3px 12px; width:fit-content; letter-spacing:0.5px;">
+        </div>
+      </div>
+
+
+      <!-- Headline -->
+      <div class="standee-headline" id="standeeHeadline">
+        Loved your visit?<br/>Leave a 15-second review!
+      </div>
+
+      <!-- Stars -->
+      <div class="standee-stars">
+        <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
+      </div>
+
+      <!-- QR Code -->
+      <div class="standee-qr">
+        <img src="/qr/{{ business.slug }}.png" alt="QR Code" id="standeeQR" />
+      </div>
+
+      <!-- Instruction -->
+      <div class="standee-instruction">
+        Scan with your phone camera<br/>
+        <span style="font-size:11px; opacity:0.7;">No app needed · Takes 30 seconds</span>
+      </div>
+
+      <!-- Review Link -->
+      <div class="standee-url">{{ review_link }}</div>
+
+      <!-- Google badge -->
+      <div class="standee-badge">
+        <svg viewBox="0 0 24 24" width="14" height="14" style="vertical-align:middle;">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Google Review
+      </div>
+
+      <!-- Bottom accent bar -->
+      <div class="standee-accent" style="background:{{ business.brand_color or '#6366f1' }};"></div>
+    </div>
+  </div>
+
+  <!-- Controls & Downloads -->
+  <div class="standee-controls">
+    <p class="chip-label" style="margin-bottom:16px;">Customize</p>
+
+    <div class="standee-control-group">
+      <label class="wa-label">Headline Text</label>
+      <input type="text" id="standeeHeadlineInput" class="wa-input" value="Loved your visit? Leave a 15-second review!" maxlength="80" oninput="updateStandeeHeadline()" />
+    </div>
+
+    <div class="standee-control-group">
+      <label class="wa-label">Table / Counter / Location Tag (Optional)</label>
+      <input type="text" id="standeeLocationInput" class="wa-input" placeholder="e.g. Table #01, Counter A, Desk 2" maxlength="30" oninput="updateStandeeLocation()" />
+      <p class="hint" style="margin-top:4px;">Adds a physical label on the standee and tracks reviews per table/counter in your analytics.</p>
+    </div>
+
+    <div class="standee-control-group">
+      <label class="wa-label">Size</label>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm btn-inline standee-size-btn active" data-size="a6" onclick="setStandeeSize('a6')">A6 (Table Tent)</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-inline standee-size-btn" data-size="a5" onclick="setStandeeSize('a5')">A5 (Counter)</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-inline standee-size-btn" data-size="a4" onclick="setStandeeSize('a4')">A4 (Wall Poster)</button>
+      </div>
+    </div>
+
+    <div class="standee-control-group" style="margin-top:24px;">
+      <p class="chip-label" style="margin-bottom:12px;">Download & Print</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary btn-sm btn-inline" onclick="printStandee()">
+          🖨 Print / Save as PDF
+        </button>
+        <a id="downloadQrBtn" href="/qr/{{ business.slug }}.png?download=1" class="btn btn-secondary btn-sm btn-inline">
+          ↓ Download QR Only
+        </a>
+      </div>
+      <p class="hint" style="margin-top:12px;">
+        Use your browser's Print function (Ctrl+P) and select "Save as PDF" for high-resolution vector output.
+      </p>
+    </div>
+
+
+    <!-- Printing Tips -->
+    <div style="margin-top:32px;">
+      <p class="chip-label" style="margin-bottom:12px;">Printing Tips</p>
+      <div class="hint">
+        <p>• Print on <b>thick card stock (300gsm)</b> for durability</p>
+        <p style="margin-top:4px;">• Laminate for a premium feel and longevity</p>
+        <p style="margin-top:4px;">• Place near <b>checkout counter, entrance, or table tents</b></p>
+        <p style="margin-top:4px;">• Ensure <b>good lighting</b> — phones need contrast to scan</p>
+        <p style="margin-top:4px;">• Recommended print shop: Any local print shop, ₹30–₹80 per standee</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="qr-display qr-locked" style="text-align:center; padding:48px;">
+  <p class="eyebrow">🔒 Unlock Required</p>
+  <p style="margin-top:12px;">Pay for your QR code first to access the Standee Kit.</p>
+  <a href="/dashboard/qr" class="btn btn-primary btn-inline" style="margin-top:16px; text-decoration:none;">
+    Go to QR Code
+  </a>
+</div>
+{% endif %}
+
+<script>
+(function() {
+  var baseSlug = "{{ business.slug }}";
+  var baseReviewUrl = "{{ review_link }}";
+
+  window.updateStandeeHeadline = function() {
+    var input = document.getElementById('standeeHeadlineInput');
+    var headline = document.getElementById('standeeHeadline');
+    if (input && headline) {
+      headline.innerHTML = input.value.replace(/\n/g, '<br/>');
+    }
+  };
+
+  window.updateStandeeLocation = function() {
+    var locInput = document.getElementById('standeeLocationInput');
+    var tagBadge = document.getElementById('standeeTag');
+    var qrImg = document.getElementById('standeeQR');
+    var urlText = document.querySelector('.standee-url');
+    var dlBtn = document.getElementById('downloadQrBtn');
+
+    var val = locInput ? locInput.value.trim() : '';
+    if (val) {
+      if (tagBadge) {
+        tagBadge.innerText = '📍 ' + val;
+        tagBadge.style.display = 'inline-block';
+      }
+      var cleanSource = val.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      if (qrImg) {
+        qrImg.src = '/qr/' + baseSlug + '.png?source=' + encodeURIComponent(cleanSource);
+      }
+      if (urlText) {
+        urlText.innerText = baseReviewUrl + '?source=' + cleanSource;
+      }
+      if (dlBtn) {
+        dlBtn.href = '/qr/' + baseSlug + '.png?download=1&source=' + encodeURIComponent(cleanSource);
+      }
+    } else {
+      if (tagBadge) {
+        tagBadge.style.display = 'none';
+      }
+      if (qrImg) {
+        qrImg.src = '/qr/' + baseSlug + '.png';
+      }
+      if (urlText) {
+        urlText.innerText = baseReviewUrl;
+      }
+      if (dlBtn) {
+        dlBtn.href = '/qr/' + baseSlug + '.png?download=1';
+      }
+    }
+  };
+
+  window.setStandeeSize = function(size) {
+    var card = document.getElementById('standeeCard');
+    document.querySelectorAll('.standee-size-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelector('[data-size="' + size + '"]').classList.add('active');
+    card.className = 'standee-card standee-' + size;
+  };
+
+  window.printStandee = function() {
+    window.print();
+  };
+})();
+</script>
+
+{% endblock %}
