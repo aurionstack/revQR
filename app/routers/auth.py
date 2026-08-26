@@ -16,7 +16,10 @@ from app.services.auth import (
     get_password_hash,
     verify_password,
     get_current_business_optional,
+    create_pre_auth_token,
+    verify_pre_auth_token,
 )
+import pyotp
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
@@ -141,6 +144,19 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED
         )
     
+    if business.is_2fa_enabled:
+        # Generate pre-auth token and redirect to 2FA page
+        pre_auth_token = create_pre_auth_token(str(business.id))
+        response = RedirectResponse(url="/login/2fa", status_code=status.HTTP_302_FOUND)
+        response.set_cookie(
+            key="pre_auth_token",
+            value=pre_auth_token,
+            httponly=True,
+            max_age=600,  # 10 minutes
+            samesite="lax",
+        )
+        return response
+    
     # Generate token & set cookie
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(
@@ -156,6 +172,62 @@ async def login(
         expires=settings.JWT_EXPIRATION_MINUTES * 60,
         samesite="lax",
     )
+    return response
+
+# ── 2FA ───────────────────────────────────────────────────────────────────────
+
+@router.get("/login/2fa", response_class=HTMLResponse)
+async def login_2fa_page(request: Request):
+    pre_auth_token = request.cookies.get("pre_auth_token")
+    if not pre_auth_token or not verify_pre_auth_token(pre_auth_token):
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    return templates.TemplateResponse(request, "auth/login_2fa.html")
+
+@router.post("/login/2fa", response_class=HTMLResponse)
+async def login_2fa(
+    request: Request,
+    totp_code: str = Form(...),
+    db: AsyncSession = Depends(get_db)
+):
+    pre_auth_token = request.cookies.get("pre_auth_token")
+    business_id_str = verify_pre_auth_token(pre_auth_token) if pre_auth_token else None
+    
+    if not business_id_str:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        
+    result = await db.execute(select(Business).filter(Business.id == uuid.UUID(business_id_str)))
+    business = result.scalars().first()
+    
+    if not business or not business.totp_secret:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        
+    # Verify TOTP code
+    totp = pyotp.TOTP(business.totp_secret)
+    if not totp.verify(totp_code):
+        return templates.TemplateResponse(
+            request,
+            "auth/login_2fa.html",
+            {"error": "Invalid 2FA code. Please try again."},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+        
+    # Generate real token & set cookie
+    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(business.id)}, expires_delta=access_token_expires
+    )
+    
+    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        max_age=settings.JWT_EXPIRATION_MINUTES * 60,
+        expires=settings.JWT_EXPIRATION_MINUTES * 60,
+        samesite="lax",
+    )
+    # Clean up pre-auth cookie
+    response.delete_cookie("pre_auth_token")
     return response
 
 # ── Logout ────────────────────────────────────────────────────────────────────

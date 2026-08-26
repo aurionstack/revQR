@@ -60,6 +60,27 @@ def verify_password_reset_token(token: str) -> Optional[dict]:
     except JWTError:
         return None
 
+def create_pre_auth_token(business_id: str) -> str:
+    """Create a short-lived token for the 2FA verification step."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=10)
+    payload = {
+        "sub": str(business_id),
+        "type": "pre_auth",
+        "exp": expire
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+def verify_pre_auth_token(token: str) -> Optional[str]:
+    """Verify pre-auth token and return business_id if valid."""
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") != "pre_auth":
+            return None
+        return payload.get("sub")
+    except JWTError:
+        return None
+
+
 
 
 # ── Dependencies ──────────────────────────────────────────────────────────────

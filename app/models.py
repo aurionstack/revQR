@@ -31,6 +31,8 @@ class Business(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)  # admin bypasses payment
     has_paid: Mapped[bool] = mapped_column(Boolean, default=False)  # unlocks QR generation
+    totp_secret: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     custom_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     scraped_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

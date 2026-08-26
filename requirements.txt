@@ -12,3 +12,4 @@ python-dotenv
 pydantic-settings
 slowapi
 razorpay
+pyotp

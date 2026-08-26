@@ -7,6 +7,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+import pyotp
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, desc
@@ -261,6 +262,67 @@ async def dashboard_settings(
     return templates.TemplateResponse(request, "dashboard/settings.html", {
         "business": business,
     })
+
+# ── Security Settings (2FA) ──────────────────────────────────────────────────
+
+@router.get("/settings/security", response_class=HTMLResponse)
+async def dashboard_security(
+    request: Request,
+    business: Business = Depends(get_current_business),
+    db: AsyncSession = Depends(get_db)
+):
+    if not business.totp_secret:
+        business.totp_secret = pyotp.random_base32()
+        db.add(business)
+        await db.commit()
+        await db.refresh(business)
+        
+    totp = pyotp.TOTP(business.totp_secret)
+    provisioning_uri = totp.provisioning_uri(name=business.email, issuer_name="revQR")
+    
+    return templates.TemplateResponse(request, "dashboard/security.html", {
+        "business": business,
+        "provisioning_uri": provisioning_uri,
+    })
+
+@router.post("/settings/security/enable")
+async def dashboard_security_enable(
+    request: Request,
+    totp_code: str = Form(...),
+    business: Business = Depends(get_current_business),
+    db: AsyncSession = Depends(get_db)
+):
+    if not business.totp_secret:
+        return RedirectResponse(url="/dashboard/settings/security", status_code=status.HTTP_302_FOUND)
+        
+    totp = pyotp.TOTP(business.totp_secret)
+    if totp.verify(totp_code):
+        business.is_2fa_enabled = True
+        db.add(business)
+        await db.commit()
+        return templates.TemplateResponse(request, "dashboard/security.html", {
+            "business": business,
+            "success": "Two-Factor Authentication has been successfully enabled."
+        })
+    else:
+        provisioning_uri = totp.provisioning_uri(name=business.email, issuer_name="revQR")
+        return templates.TemplateResponse(request, "dashboard/security.html", {
+            "business": business,
+            "provisioning_uri": provisioning_uri,
+            "error": "Invalid code. Please try again."
+        })
+
+@router.post("/settings/security/disable")
+async def dashboard_security_disable(
+    request: Request,
+    business: Business = Depends(get_current_business),
+    db: AsyncSession = Depends(get_db)
+):
+    business.is_2fa_enabled = False
+    business.totp_secret = None
+    db.add(business)
+    await db.commit()
+    return RedirectResponse(url="/dashboard/settings/security", status_code=status.HTTP_302_FOUND)
 
 @router.post("/settings", response_class=HTMLResponse)
 async def dashboard_settings_post(

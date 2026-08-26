@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Two-Factor Authentication — revQR{% endblock %}
+{% block meta_description %}Enter your 2FA code to securely log in.{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="stage">
+    <main class="ticket">
+      <div class="ticket-head">
+        <p class="eyebrow">Two-Step Verification</p>
+        <h1 class="biz-name" style="justify-content:center; display:flex;">revQR</h1>
+        <p class="meta-line">ENTER AUTHENTICATOR CODE</p>
+      </div>
+
+      <div class="perf"></div>
+
+      <div class="ticket-body">
+        {% if error %}
+        <div class="flash flash-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/login/2fa" id="login2faForm">
+          <div class="form-group">
+            <label class="form-label" for="totp_code">6-Digit Code</label>
+            <input
+              class="form-input"
+              type="text"
+              id="totp_code"
+              name="totp_code"
+              placeholder="e.g. 123456"
+              required
+              maxlength="6"
+              pattern="\d{6}"
+              autocomplete="one-time-code"
+              autofocus
+            />
+          </div>
+
+          <div class="continue-row">
+            <button type="submit" class="btn btn-primary" id="loginBtn">
+              Verify
+            </button>
+          </div>
+        </form>
+        
+        <div class="private-link-row" style="margin-top:24px;">
+          <a href="/login" class="btn-ghost">← Back to Login</a>
+        </div>
+      </div>
+
+      <div class="perf" style="margin-top:0;"></div>
+      <div class="ticket-footer">
+        <p class="meta-line">QRREVIEWS.APP</p>
+      </div>
+    </main>
+    <div class="torn-bottom"></div>
+  </div>
+</div>
+{% endblock %}

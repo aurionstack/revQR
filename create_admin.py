@@ -5,7 +5,7 @@ from app.database import async_session_factory
 from app.models import Business
 from app.services.auth import get_password_hash
 
-async def create_or_update_admin(name="Admin User", email="admin@qrreviews.app", password="AdminPassword123!", slug="admin"):
+async def create_or_update_admin(name="Admin User", email="aurionstack@gmail.com", password="AdminPassword123!", slug="admin"):
     async with async_session_factory() as session:
         # Check if user already exists with this email or slug
         res = await session.execute(select(Business).filter((Business.email == email) | (Business.slug == slug)))
