@@ -1,5 +1,7 @@
 """Validation and normalization for direct Google review links."""
 
+import base64
+import binascii
 import re
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
@@ -72,30 +74,60 @@ def google_review_destination(stored_value: str | None) -> str | None:
     return normalize_google_review_link(value)
 
 
-def google_business_profile_destination(stored_value: str | None) -> str | None:
-    """Return the specific business profile associated with a stored review link."""
-    value = (stored_value or "").strip()
-    if not value:
+def _g_page_ludocid(code: str) -> int | None:
+    """Decode the public location ID embedded in a current g.page code."""
+    try:
+        raw = base64.urlsafe_b64decode(code + "=" * (-len(code) % 4))
+    except (binascii.Error, ValueError):
         return None
 
+    # Current g.page codes contain protobuf field 1 as a fixed64 value:
+    # tag 0x09 followed by the little-endian Google location/CID value.
+    if len(raw) < 9 or raw[0] != 0x09:
+        return None
+    return int.from_bytes(raw[1:9], byteorder="little", signed=False)
+
+
+def _google_search_profile_url(
+    business_name: str | None,
+    ludocid: int | None = None,
+) -> str | None:
+    params: dict[str, str] = {}
+    if business_name and business_name.strip():
+        params["q"] = business_name.strip()
+    if ludocid is not None:
+        params["ludocid"] = str(ludocid)
+    if not params:
+        return None
+    params["ibp"] = "gwp;0,7"
+    return "https://www.google.com/search?" + urlencode(params)
+
+
+def google_business_profile_destination(
+    stored_value: str | None,
+    business_name: str | None = None,
+) -> str | None:
+    """Return this business's Google Search profile/reviews destination."""
+    value = (stored_value or "").strip()
+    if not value:
+        return _google_search_profile_url(business_name)
+
     if PLACE_ID_PATTERN.fullmatch(value):
-        return "https://www.google.com/maps/search/?" + urlencode(
-            {"api": "1", "query": "Google", "query_place_id": value}
-        )
+        # A Place ID cannot be converted to a Search ludocid offline. Use the
+        # connected account's business name on Google Search, never Maps.
+        return _google_search_profile_url(business_name)
 
     normalized = normalize_google_review_link(value)
     parsed = urlparse(normalized)
 
     if parsed.hostname == "g.page":
-        # The same g.page code without `/review` opens this exact business's
-        # Google profile and reviews panel instead of the customer write form.
-        profile_path = parsed.path.removesuffix("/review").rstrip("/") + "/"
-        return urlunparse(("https", "g.page", profile_path, "", "", ""))
+        match = G_PAGE_REVIEW_PATH.fullmatch(parsed.path)
+        if match:
+            destination = _google_search_profile_url(
+                business_name,
+                _g_page_ludocid(match.group("code")),
+            )
+            if destination:
+                return destination
 
-    place_id = parse_qs(parsed.query).get("placeid", [""])[0].strip()
-    if PLACE_ID_PATTERN.fullmatch(place_id):
-        return "https://www.google.com/maps/search/?" + urlencode(
-            {"api": "1", "query": "Google", "query_place_id": place_id}
-        )
-
-    return None
+    return _google_search_profile_url(business_name)

@@ -156,7 +156,10 @@ async def dashboard_reviews(
         "reviews": reviews,
         "feedback_items": feedback_items,
         "google_business_reviews_url": (
-            google_business_profile_destination(business.google_place_id)
+            google_business_profile_destination(
+                business.google_place_id,
+                business.name,
+            )
             or GOOGLE_BUSINESS_REVIEWS_URL
         ),
     })
