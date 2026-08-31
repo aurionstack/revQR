@@ -70,7 +70,8 @@ async def generate_review_variations(
     prompt_parts = [
         f"You are helping a customer write a Google Review for '{business_name}'.",
         f"Star Rating: {rating} out of 5 stars.",
-        f"Customer Notes/Keywords: '{notes if notes.strip() else 'Great experience'}'\n",
+        f"Customer Notes/Keywords (EXTREMELY IMPORTANT): '{notes if notes.strip() else 'Great experience'}'\n",
+        "CRITICAL INSTRUCTION: You MUST directly incorporate the customer's exact Notes/Keywords into the generated reviews. Do not generate generic responses; ensure the provided keywords are the central focus of the review.\n"
     ]
 
     if scraped_context:
@@ -85,10 +86,10 @@ async def generate_review_variations(
         )
 
     prompt_parts.append(
-        "Generate THREE distinct review variations written in the first person ('I'/'We'):\n"
-        "1. 'punchy': Short, crisp, and direct (1-2 sentences max).\n"
-        "2. 'detailed': Thoughtful, mentions specific details/service (2-3 sentences).\n"
-        "3. 'warm': Enthusiastic, friendly, high praise or constructive recommendation (2-3 sentences).\n\n"
+        "Generate THREE distinct review variations written in the first person ('I'/'We') that strongly feature the Customer Notes/Keywords:\n"
+        "1. 'punchy': Short, crisp, and direct focusing entirely on the provided keywords (1-2 sentences max).\n"
+        "2. 'detailed': Thoughtful, weaving the keywords into specific details about the service (2-3 sentences).\n"
+        "3. 'warm': Enthusiastic, friendly, high praise (or constructive recommendation) that highlights the keywords naturally (2-3 sentences).\n\n"
         "Return ONLY a valid JSON object with the keys 'punchy', 'detailed', and 'warm'. Do not wrap in markdown quotes if possible."
     )
 

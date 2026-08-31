@@ -1836,20 +1836,19 @@ textarea::placeholder {
 }
 
 .standee-card {
-  width: 290px;
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  width: 280px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   text-align: center;
   transition: width .3s ease;
 }
-.standee-card.standee-a5 { width: 330px; }
-.standee-card.standee-a4 { width: 390px; }
+.standee-card.standee-a5 { width: 320px; }
+.standee-card.standee-a4 { width: 380px; }
 
 .standee-accent {
-  height: 8px;
+  height: 6px;
   width: 100%;
 }
 .standee-header {
@@ -1857,99 +1856,79 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .standee-logo {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 .standee-logo-placeholder {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-family: var(--mono);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 .standee-biz-name {
   font-family: var(--sans);
-  font-size: 19px;
-  font-weight: 800;
-  color: #111827;
-  letter-spacing: -0.01em;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
 }
 .standee-headline {
-  padding: 14px 20px 4px;
+  padding: 16px 20px;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.4;
-  color: #374151;
+  color: #333;
 }
 .standee-stars {
   font-size: 24px;
-  letter-spacing: 6px;
-  padding: 4px 0 0;
+  letter-spacing: 4px;
+  padding: 4px 0;
 }
 .standee-qr {
-  padding: 16px 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 20px;
 }
 .standee-qr img {
-  width: 165px;
-  height: 165px;
-  border-radius: 12px;
+  width: 160px;
+  height: 160px;
+  border-radius: 8px;
+  margin: 0 auto;
   display: block;
 }
 .standee-instruction {
   font-family: var(--sans);
   font-size: 13px;
-  font-weight: 600;
-  color: #4b5563;
-  padding: 0 20px 12px;
+  color: #666;
+  padding: 0 20px 8px;
   line-height: 1.5;
 }
-.standee-instruction-sub {
-  font-size: 11px;
-  font-weight: 400;
-  color: #9ca3af;
-  display: block;
-  margin-top: 2px;
-}
-.standee-footer-wrap {
-  padding: 10px 16px 16px;
-  background: #f9fafb;
-  border-top: 1px dashed #e5e7eb;
+.standee-url {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #999;
+  letter-spacing: .04em;
+  padding: 8px 20px;
+  word-break: break-all;
 }
 .standee-badge {
   font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
+  font-size: 11px;
+  color: #666;
+  padding: 8px 0 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-}
-.standee-powered-link {
-  margin-top: 6px;
-}
-.standee-powered-link a {
-  font-family: var(--sans);
-  font-size: 10.5px;
-  color: #9ca3af;
-  text-decoration: none;
-  font-weight: 500;
 }
 
 .standee-controls {

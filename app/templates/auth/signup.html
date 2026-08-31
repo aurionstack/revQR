@@ -68,21 +68,18 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="google_place_id">Google Place ID</label>
+            <label class="form-label" for="google_place_id">Google Place ID or Profile URL</label>
             <input
               class="form-input"
               type="text"
               id="google_place_id"
               name="google_place_id"
-              placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
+              placeholder="e.g. https://share.google/..."
               maxlength="255"
               value="{{ form_data.google_place_id if form_data else '' }}"
             />
             <p class="form-hint">
-              Needed to link customers to your Google Reviews page.
-              <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">
-                How to find your Place ID →
-              </a>
+              Needed to link customers to your Google Reviews page. Paste your Maps share URL or Place ID.
             </p>
           </div>
 

@@ -103,34 +103,16 @@
               <span class="hint">Accent color</span>
             </div>
           </div>
-        <!-- Google Place ID with URL Converter -->
-        <div class="wa-input-group" style="margin-bottom:20px; background:var(--paper-deep); padding:16px; border-radius:10px; border:1px solid var(--line);">
-          <label class="wa-label" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>Google Place ID</span>
-            <span class="hint" style="margin:0;">Paste Maps Link or Place ID</span>
-          </label>
-          <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <div class="wa-input-group">
+            <label class="wa-label">Google Place ID</label>
             <input
               type="text"
-              id="editAdminMapsUrlInput"
-              placeholder="Paste Maps URL (e.g. https://maps.app.goo.gl/...)"
+              name="google_place_id"
+              value="{{ client.google_place_id or '' }}"
+              placeholder="ChIJ..."
               class="wa-input"
-              style="flex:1; font-size:13px;"
             />
-            <button type="button" class="btn btn-secondary btn-sm" onclick="convertEditAdminMapsLink()" style="white-space:nowrap;">
-              Convert Link
-            </button>
           </div>
-          <p id="editAdminConvertFeedback" style="font-size:12px; margin-bottom:8px; display:none;"></p>
-          <input
-            type="text"
-            id="editAdminPlaceIdInput"
-            name="google_place_id"
-            value="{{ client.google_place_id or '' }}"
-            placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
-            class="wa-input"
-            style="font-family:var(--mono); font-size:13px;"
-          />
         </div>
 
         <!-- Reset Password (optional) -->
@@ -168,36 +150,4 @@
     </div>
   </main>
 </div>
-
-<script>
-async function convertEditAdminMapsLink() {
-  var input = document.getElementById('editAdminMapsUrlInput');
-  var feedback = document.getElementById('editAdminConvertFeedback');
-  var target = document.getElementById('editAdminPlaceIdInput');
-  var val = input ? input.value.trim() : '';
-  if (!val) return;
-
-  feedback.style.display = 'block';
-  feedback.style.color = 'var(--ink-soft)';
-  feedback.innerText = '⏳ Resolving Place ID...';
-
-  try {
-    var fd = new FormData();
-    fd.append('url', val);
-    var res = await fetch('/dashboard/settings/convert-place-id', { method: 'POST', body: fd });
-    var data = await res.json();
-    if (data.success && data.place_id) {
-      target.value = data.place_id;
-      feedback.style.color = 'var(--positive)';
-      feedback.innerHTML = '✓ <b>Found Place ID:</b> <code>' + data.place_id + '</code>' + (data.name ? ' (' + data.name + ')' : '');
-    } else {
-      feedback.style.color = 'var(--negative)';
-      feedback.innerText = '✕ ' + (data.error || 'Could not find Place ID from this link.');
-    }
-  } catch (e) {
-    feedback.style.color = 'var(--negative)';
-    feedback.innerText = '✕ Error resolving URL.';
-  }
-}
-</script>
 {% endblock %}
