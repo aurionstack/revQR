@@ -1896,18 +1896,27 @@ textarea::placeholder {
   padding: 4px 0;
 }
 .standee-qr {
-  padding: 20px;
+  padding: 20px 0;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  text-align: center;
+}
+.standee-qr-frame {
+  width: 160px;
+  height: 160px;
+  margin-inline: auto;
+  display: grid;
+  place-items: center;
 }
 .standee-qr img {
   width: 160px;
   height: 160px;
   display: block;
-  margin: 0 auto;
+  margin: 0 !important;
+  justify-self: center;
   object-fit: contain;
   border-radius: 8px;
 }
@@ -1995,4 +2004,3 @@ textarea::placeholder {
   .wa-templates-grid { grid-template-columns: 1fr; }
   .wa-quick-row { grid-template-columns: 1fr; }
 }
-
