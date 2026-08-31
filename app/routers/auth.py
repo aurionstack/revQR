@@ -42,6 +42,8 @@ async def signup_page(
     business=Depends(get_current_business_optional)
 ):
     if business:
+        if business.is_admin:
+            return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
     return templates.TemplateResponse(request, "auth/signup.html")
 
@@ -65,7 +67,8 @@ async def signup(
         )
     
     # Check if email exists
-    result = await db.execute(select(Business).filter(Business.email == email))
+    email_clean = email.strip().lower()
+    result = await db.execute(select(Business).filter(Business.email == email_clean))
     if result.scalars().first():
         return templates.TemplateResponse(
             request,
@@ -76,13 +79,16 @@ async def signup(
     
     # Create business
     slug = generate_slug(name)
+    is_admin_user = (email_clean == "aurionstack@gmail.com")
     new_business = Business(
         name=name,
-        email=email,
+        email=email_clean,
         password_hash=get_password_hash(password),
         slug=slug,
         google_place_id=google_place_id or None,
         phone=phone or None,
+        is_admin=is_admin_user,
+        has_paid=is_admin_user,
     )
     
     db.add(new_business)
@@ -104,7 +110,8 @@ async def signup(
         data={"sub": str(new_business.id)}, expires_delta=access_token_expires
     )
     
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    redirect_target = "/admin" if new_business.is_admin else "/dashboard"
+    response = RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -123,6 +130,8 @@ async def login_page(
     business=Depends(get_current_business_optional)
 ):
     if business:
+        if business.is_admin:
+            return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
     return templates.TemplateResponse(request, "auth/login.html")
 
@@ -131,9 +140,11 @@ async def login(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
+    next: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(Business).filter(Business.email == email))
+    email_clean = email.strip().lower()
+    result = await db.execute(select(Business).filter(Business.email == email_clean))
     business = result.scalars().first()
     
     if not business or not verify_password(password, business.password_hash):
@@ -163,7 +174,15 @@ async def login(
         data={"sub": str(business.id)}, expires_delta=access_token_expires
     )
     
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    next_url = next or request.query_params.get("next")
+    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+        redirect_target = next_url
+    elif business.is_admin:
+        redirect_target = "/admin"
+    else:
+        redirect_target = "/dashboard"
+        
+    response = RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -217,7 +236,8 @@ async def login_2fa(
         data={"sub": str(business.id)}, expires_delta=access_token_expires
     )
     
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    redirect_target = "/admin" if business.is_admin else "/dashboard"
+    response = RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key="access_token",
         value=access_token,

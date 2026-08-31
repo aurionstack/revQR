@@ -26,6 +26,7 @@
         {% endif %}
 
         <form method="POST" action="/login" id="loginForm">
+          <input type="hidden" name="next" value="{{ request.query_params.get('next', '') }}" />
           <div class="form-group">
             <label class="form-label" for="email">Email</label>
             <input

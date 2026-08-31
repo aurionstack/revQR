@@ -27,7 +27,12 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    # Startup
+    # Startup — ensure database tables and seed default super admin
+    try:
+        from create_admin import create_or_update_admin
+        await create_or_update_admin()
+    except Exception as e:
+        print(f"[Warning] Auto-admin seed skipped: {e}")
     yield
     # Shutdown — engine disposal handled by asyncpg
     from app.database import engine
@@ -60,10 +65,38 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.services.rate_limit import limiter
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
+from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi import status
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(FastAPIHTTPException)
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    accept = request.headers.get("accept", "")
+    path = request.url.path
+    is_html_request = "text/html" in accept or request.headers.get("sec-fetch-dest") in ["document", "empty"]
+    is_protected_web_path = path.startswith("/dashboard") or path.startswith("/admin")
+
+    if exc.status_code == 401 and (is_html_request or is_protected_web_path):
+        response = RedirectResponse(url=f"/login?next={path}", status_code=status.HTTP_302_FOUND)
+        response.delete_cookie("access_token")
+        return response
+
+    if exc.status_code == 403 and (is_html_request or is_protected_web_path):
+        if path.startswith("/admin"):
+            return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=getattr(exc, "headers", None),
+    )
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
