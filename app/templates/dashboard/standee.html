@@ -45,7 +45,7 @@
 
       <!-- QR Code -->
       <div class="standee-qr">
-        <img src="/qr/{{ business.slug }}.png" alt="QR Code" id="standeeQR" />
+        <img src="/qr/{{ business.slug }}.png?badge=0" alt="QR Code" id="standeeQR" />
       </div>
 
       <!-- Instruction -->
@@ -54,8 +54,8 @@
         <span style="font-size:11px; opacity:0.7;">No app needed · Takes 30 seconds</span>
       </div>
 
-      <!-- Review Link -->
-      <div class="standee-url">revqr.app/{{ business.slug }}</div>
+      <!-- revQR home -->
+      <div class="standee-url">{{ home_display }}</div>
 
       <!-- Google badge -->
       <div class="standee-badge">
@@ -98,33 +98,13 @@
     </div>
 
     <div class="standee-control-group" style="margin-top:24px;">
-      <p class="chip-label" style="margin-bottom:12px;">Download</p>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-primary btn-sm btn-inline" onclick="downloadStandeeImage()">
-          ↓ Download Standee Image
-        </button>
-        <a id="downloadQrBtn" href="/qr/{{ business.slug }}.png?download=1" class="btn btn-secondary btn-sm btn-inline">
-          ↓ Download QR Only
-        </a>
-      </div>
+      <p class="chip-label" style="margin-bottom:12px;">Download Image</p>
+      <button type="button" class="btn btn-primary btn-sm" id="downloadStandeeBtn" onclick="downloadStandeeImage()">
+        ↓ Download Whole Standee
+      </button>
       <p class="hint" style="margin-top:12px;">
-        Downloads a high-quality PNG image of the standee. Use this file for printing.
+        Saves the complete customized standee as a high-resolution PNG image.
       </p>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-
-    <!-- Printing Tips -->
-    <div style="margin-top:32px;">
-      <p class="chip-label" style="margin-bottom:12px;">Printing Tips</p>
-      <div class="hint">
-        <p>• Print on <b>thick card stock (300gsm)</b> for durability</p>
-        <p style="margin-top:4px;">• Laminate for a premium feel and longevity</p>
-        <p style="margin-top:4px;">• Place near <b>checkout counter, entrance, or table tents</b></p>
-        <p style="margin-top:4px;">• Ensure <b>good lighting</b> — phones need contrast to scan</p>
-        <p style="margin-top:4px;">• Recommended print shop: Any local print shop, ₹30–₹80 per standee</p>
-      </div>
     </div>
   </div>
 </div>
@@ -139,16 +119,16 @@
 </div>
 {% endif %}
 
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 (function() {
   var baseSlug = "{{ business.slug }}";
-  var baseReviewUrl = "{{ review_link }}";
 
   window.updateStandeeHeadline = function() {
     var input = document.getElementById('standeeHeadlineInput');
     var headline = document.getElementById('standeeHeadline');
     if (input && headline) {
-      headline.innerHTML = input.value.replace(/\n/g, '<br/>');
+      headline.textContent = input.value;
     }
   };
 
@@ -156,8 +136,6 @@
     var locInput = document.getElementById('standeeLocationInput');
     var tagBadge = document.getElementById('standeeTag');
     var qrImg = document.getElementById('standeeQR');
-    var urlText = document.querySelector('.standee-url');
-    var dlBtn = document.getElementById('downloadQrBtn');
 
     var val = locInput ? locInput.value.trim() : '';
     if (val) {
@@ -167,26 +145,14 @@
       }
       var cleanSource = val.toLowerCase().replace(/[^a-z0-9]/g, '_');
       if (qrImg) {
-        qrImg.src = '/qr/' + baseSlug + '.png?source=' + encodeURIComponent(cleanSource);
-      }
-      if (urlText) {
-        urlText.innerText = 'revqr.app/{{ business.slug }}' + '?source=' + cleanSource;
-      }
-      if (dlBtn) {
-        dlBtn.href = '/qr/' + baseSlug + '.png?download=1&source=' + encodeURIComponent(cleanSource);
+        qrImg.src = '/qr/' + baseSlug + '.png?badge=0&source=' + encodeURIComponent(cleanSource);
       }
     } else {
       if (tagBadge) {
         tagBadge.style.display = 'none';
       }
       if (qrImg) {
-        qrImg.src = '/qr/' + baseSlug + '.png';
-      }
-      if (urlText) {
-        urlText.innerText = 'revqr.app/{{ business.slug }}';
-      }
-      if (dlBtn) {
-        dlBtn.href = '/qr/' + baseSlug + '.png?download=1';
+        qrImg.src = '/qr/' + baseSlug + '.png?badge=0';
       }
     }
   };
@@ -198,22 +164,51 @@
     card.className = 'standee-card standee-' + size;
   };
 
-  window.downloadStandeeImage = function() {
+  function waitForImages(container) {
+    return Promise.all(Array.from(container.querySelectorAll('img')).map(function(img) {
+      if (img.complete) return Promise.resolve();
+      return new Promise(function(resolve) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
+
+  window.downloadStandeeImage = async function() {
     var card = document.getElementById('standeeCard');
-    if (!card) return;
-    
-    // Briefly adjust styling if needed for better html2canvas rendering
-    var oldTransform = card.style.transform;
-    card.style.transform = 'none'; // Prevents html2canvas cutting off issues
-    
-    html2canvas(card, { scale: 3, useCORS: true }).then(function(canvas) {
-      card.style.transform = oldTransform;
-      
+    var button = document.getElementById('downloadStandeeBtn');
+    if (!card || typeof html2canvas === 'undefined') {
+      showToast('Image download is unavailable. Please refresh and try again.', 'error');
+      return;
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Preparing image...';
+    }
+
+    try {
+      await waitForImages(card);
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      var canvas = await html2canvas(card, {
+        scale: 4,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
       var link = document.createElement('a');
       link.download = 'revqr-standee-' + baseSlug + '.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
-    });
+      showToast('Standee image downloaded', 'success');
+    } catch (error) {
+      showToast('Could not create the image. Please try again.', 'error');
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = '↓ Download Whole Standee';
+      }
+    }
   };
 })();
 </script>

@@ -68,18 +68,21 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="google_place_id">Google Place ID or Profile URL</label>
+            <label class="form-label" for="google_place_id">Google review link</label>
             <input
               class="form-input"
               type="text"
               id="google_place_id"
               name="google_place_id"
-              placeholder="e.g. https://share.google/..."
+              placeholder="https://g.page/r/.../review"
               maxlength="255"
               value="{{ form_data.google_place_id if form_data else '' }}"
             />
             <p class="form-hint">
-              Needed to link customers to your Google Reviews page. Paste your Maps share URL or Place ID.
+              In your Google Business Profile, choose <b>Ask for reviews</b> and paste the link here. No Google API key is needed.
+              <a href="https://support.google.com/business/answer/3474122" target="_blank" rel="noopener">
+                How to get your review link →
+              </a>
             </p>
           </div>
 

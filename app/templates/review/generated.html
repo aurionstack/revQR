@@ -39,7 +39,8 @@
       type="button"
       class="btn btn-primary"
       id="postBtn"
-      onclick="postOnGoogle('{{ google_review_url }}')"
+      data-google-url="{{ google_review_url or '' }}"
+      onclick="postOnGoogle(this.dataset.googleUrl)"
     >
       Post on Google
     </button>

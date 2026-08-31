@@ -22,6 +22,7 @@ from app.services.auth import (
 import pyotp
 from app.config import settings
 from app.main import TEMPLATES_DIR
+from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
 
 router = APIRouter(tags=["auth"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -57,12 +58,19 @@ async def signup(
     phone: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
+    form_data = {
+        "name": name,
+        "email": email,
+        "google_place_id": google_place_id,
+        "phone": phone,
+    }
+
     # Validation
     if len(password) < 8:
         return templates.TemplateResponse(
             request,
             "auth/signup.html",
-            {"error": "Password must be at least 8 characters."},
+            {"error": "Password must be at least 8 characters.", "form_data": form_data},
             status_code=status.HTTP_400_BAD_REQUEST
         )
     
@@ -73,10 +81,20 @@ async def signup(
         return templates.TemplateResponse(
             request,
             "auth/signup.html",
-            {"error": "Email already registered. Please log in."},
+            {"error": "Email already registered. Please log in.", "form_data": form_data},
             status_code=status.HTTP_400_BAD_REQUEST
         )
     
+    try:
+        review_link = normalize_google_review_link(google_place_id)
+    except GoogleReviewLinkError as exc:
+        return templates.TemplateResponse(
+            request,
+            "auth/signup.html",
+            {"error": str(exc), "form_data": form_data},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     # Create business
     slug = generate_slug(name)
     is_admin_user = (email_clean == "aurionstack@gmail.com")
@@ -85,7 +103,9 @@ async def signup(
         email=email_clean,
         password_hash=get_password_hash(password),
         slug=slug,
-        google_place_id=google_place_id or None,
+        # Keep the existing column name for database compatibility. It now stores
+        # the direct Google review link (legacy Place IDs are still supported).
+        google_place_id=review_link,
         phone=phone or None,
         is_admin=is_admin_user,
         has_paid=is_admin_user,
@@ -100,7 +120,7 @@ async def signup(
         return templates.TemplateResponse(
             request,
             "auth/signup.html",
-            {"error": "An error occurred during registration."},
+            {"error": "An error occurred during registration.", "form_data": form_data},
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     
@@ -363,4 +383,3 @@ async def reset_password_post(
     return templates.TemplateResponse(request, "auth/login.html", {
         "success": "✓ Password reset successfully! Please log in with your new password."
     })
-

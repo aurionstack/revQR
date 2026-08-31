@@ -14,6 +14,7 @@ from app.database import get_db
 from app.models import Business, Scan, Review, Feedback
 from app.services.rate_limit import limiter
 from app.services.ai import generate_review_variations, generate_review_reply
+from app.services.google_reviews import GoogleReviewLinkError, google_review_destination
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
@@ -82,6 +83,9 @@ async def submit_rating(
     business = res.scalar_one_or_none()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
+
+    if rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
         
     chips = []
     if rating >= 4:
@@ -116,21 +120,35 @@ async def generate_review_text(
     business = res.scalar_one_or_none()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
-        
-    # Combine selected chips and customer notes
-    full_notes = ""
-    if selected_chips:
-        full_notes += selected_chips + ". "
-    if customer_notes:
-        full_notes += customer_notes
+
+    if rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
+
+    # Preserve every selected highlight separately. The UI allows multiple chips,
+    # while these caps keep public AI requests predictable and inexpensive.
+    selected_tags = [
+        tag.strip()[:50]
+        for tag in selected_chips.split(",")
+        if tag.strip()
+    ][:8]
+    customer_hint = customer_notes.strip()[:500]
+
+    prompt_details = []
+    if selected_tags:
+        prompt_details.append("Selected highlights: " + "; ".join(selected_tags))
+    if customer_hint:
+        prompt_details.append("Customer's own hint: " + customer_hint)
+    full_notes = "\n".join(prompt_details)
 
     # Generate 3 review variations using AI
     variations = await generate_review_variations(
         rating=rating, 
-        notes=full_notes, 
+        notes=full_notes,
         business_name=business.name,
         custom_prompt=business.custom_prompt,
-        scraped_context=business.scraped_context
+        # The former review "scraper" supplied hard-coded restaurant examples
+        # for every business. Do not let that stale mock data influence drafts.
+        scraped_context=None
     )
     
     # Save Review to DB (primary = detailed version)
@@ -146,16 +164,13 @@ async def generate_review_text(
     await db.commit()
     await db.refresh(new_review)
     
-    # Build Google URL
-    # If place_id exists, construct exact write review url or use it directly if it's a URL. Else fallback to maps search.
-    if business.google_place_id:
-        if business.google_place_id.startswith("http://") or business.google_place_id.startswith("https://"):
-            google_review_url = business.google_place_id
-        else:
-            google_review_url = f"https://search.google.com/local/writereview?placeid={business.google_place_id}"
-    else:
-        encoded_name = business.name.replace(" ", "+")
-        google_review_url = f"https://www.google.com/maps/search/?api=1&query={encoded_name}"
+    # Use the exact link supplied by the business. Do not guess from a name,
+    # because a Maps search can send customers to the wrong listing.
+    try:
+        google_review_url = google_review_destination(business.google_place_id)
+    except GoogleReviewLinkError:
+        # Preserve the review draft even if an old account contains a malformed URL.
+        google_review_url = None
         
     return templates.TemplateResponse(request, "review/generated.html", {
         "review_id": str(new_review.id),

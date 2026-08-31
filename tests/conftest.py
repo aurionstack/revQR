@@ -12,7 +12,11 @@ from app.database import get_db
 TEST_DATABASE_URL = os.environ.get("DATABASE_URL_TEST", "postgresql+asyncpg://postgres:postgres@localhost:5432/qr_reviews_test")
 
 @pytest.fixture(scope="function", autouse=True)
-async def setup_test_db():
+async def setup_test_db(request):
+    if request.node.get_closest_marker("no_db"):
+        yield
+        return
+
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

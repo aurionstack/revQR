@@ -17,6 +17,7 @@ from app.models import Business, Scan, Review, Feedback
 from app.services.auth import get_current_business
 from app.config import settings
 from app.main import TEMPLATES_DIR
+from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -231,11 +232,13 @@ async def dashboard_standee(
 ):
     app_url = str(request.base_url).rstrip("/")
     review_link = f"{app_url}/review/{business.slug}"
+    home_display = request.url.netloc
 
     return templates.TemplateResponse(request, "dashboard/standee.html", {
         "business": business,
         "app_url": app_url,
         "review_link": review_link,
+        "home_display": home_display,
     })
 
 
@@ -336,9 +339,23 @@ async def dashboard_settings_post(
     business: Business = Depends(get_current_business),
     db: AsyncSession = Depends(get_db)
 ):
+    try:
+        review_link = normalize_google_review_link(google_place_id)
+    except GoogleReviewLinkError as exc:
+        return templates.TemplateResponse(
+            request,
+            "dashboard/settings.html",
+            {
+                "business": business,
+                "flash_error": str(exc),
+                "google_profile_input": google_place_id,
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
     business.name = name
     business.brand_color = brand_color
-    business.google_place_id = google_place_id
+    business.google_place_id = review_link
     business.phone = phone
     business.custom_prompt = custom_prompt
 
@@ -356,34 +373,3 @@ async def dashboard_settings_post(
     await db.refresh(business)
 
     return RedirectResponse(url="/dashboard/settings", status_code=status.HTTP_302_FOUND)
-
-from app.services.scraper import fetch_google_reviews
-
-@router.post("/settings/scrape")
-async def dashboard_settings_scrape(
-    request: Request,
-    business: Business = Depends(get_current_business),
-    db: AsyncSession = Depends(get_db)
-):
-    if not business.google_place_id:
-        # Render a toast error if they try to scrape without a place ID
-        return HTMLResponse(
-            "<div class='toast toast-error'>Please enter a Google Place ID first and save settings.</div>",
-            status_code=400
-        )
-        
-    scraped_data = await fetch_google_reviews(business.google_place_id)
-    if scraped_data:
-        business.scraped_context = scraped_data
-        db.add(business)
-        await db.commit()
-        # Return success toast and tell HTMX to reload the page to show new context
-        return HTMLResponse(
-            "<div class='toast toast-success'>Reviews fetched successfully! Reloading...</div>",
-            headers={"HX-Refresh": "true"}
-        )
-    else:
-        return HTMLResponse(
-            "<div class='toast toast-error'>Failed to fetch reviews.</div>",
-            status_code=500
-        )

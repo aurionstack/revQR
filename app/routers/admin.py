@@ -13,6 +13,7 @@ from sqlalchemy import func, desc, or_
 from app.database import get_db
 from app.models import Business, Scan, Review, Feedback
 from app.services.auth import get_current_admin, get_password_hash, create_access_token
+from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
@@ -167,6 +168,13 @@ async def create_client_post(
 
     password_hash = get_password_hash(password.strip())
 
+    try:
+        review_link = normalize_google_review_link(google_place_id)
+    except GoogleReviewLinkError as exc:
+        return templates.TemplateResponse(request, "admin/new_client.html", {
+            "admin": admin, "error": str(exc)
+        }, status_code=400)
+
     new_biz = Business(
         id=uuid.uuid4(),
         name=name,
@@ -174,7 +182,7 @@ async def create_client_post(
         email=email,
         password_hash=password_hash,
         phone=phone.strip() if phone else None,
-        google_place_id=google_place_id.strip() if google_place_id else None,
+        google_place_id=review_link,
         brand_color=brand_color if brand_color else "#6366f1",
         has_paid=bool(has_paid),
         is_admin=bool(is_admin),
@@ -266,11 +274,13 @@ async def view_client_standee(
 
     app_url = str(request.base_url).rstrip("/")
     review_link = f"{app_url}/review/{biz.slug}"
+    home_display = request.url.netloc
 
     return templates.TemplateResponse(request, "dashboard/standee.html", {
         "business": biz,
         "app_url": app_url,
         "review_link": review_link,
+        "home_display": home_display,
         "admin_view": True
     })
 
@@ -317,12 +327,19 @@ async def edit_client_post(
     if not biz:
         raise HTTPException(status_code=404, detail="Client not found")
 
+    try:
+        review_link = normalize_google_review_link(google_place_id)
+    except GoogleReviewLinkError as exc:
+        return templates.TemplateResponse(request, "admin/edit_client.html", {
+            "admin": admin, "client": biz, "error": str(exc)
+        }, status_code=400)
+
     # Update basic fields
     biz.name = name.strip()
     biz.slug = slugify(slug)
     biz.email = email.strip().lower()
     biz.phone = phone.strip() if phone else None
-    biz.google_place_id = google_place_id.strip() if google_place_id else None
+    biz.google_place_id = review_link
     biz.brand_color = brand_color if brand_color else "#6366f1"
     biz.has_paid = bool(has_paid)
     biz.is_admin = bool(is_admin)

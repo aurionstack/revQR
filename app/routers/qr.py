@@ -62,8 +62,8 @@ async def get_qr_image(
         target_url,
         format=ext,
         fill_color=fill_color,
-        business_name=target_business.name,
-        label_text=label_text,
+        business_name=target_business.name if badge else None,
+        label_text=label_text if badge else None,
     )
 
     media_type = "image/png" if ext == "png" else "image/svg+xml"
@@ -74,4 +74,3 @@ async def get_qr_image(
         headers["Content-Disposition"] = f'attachment; filename="qr_{target_business.slug}{source_suffix}.{ext}"'
 
     return Response(content=qr_bytes, media_type=media_type, headers=headers)
-

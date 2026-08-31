@@ -62,20 +62,23 @@
       <p class="form-hint">This color brands your customer-facing review page and QR code.</p>
     </div>
 
-    <!-- Google Place ID -->
+    <!-- Direct Google review link -->
     <div class="form-group">
-      <label class="form-label" for="settingsPlaceId">Google Place ID or Profile URL</label>
+      <label class="form-label" for="settingsPlaceId">Google review link</label>
       <input
         class="form-input"
         type="text"
         id="settingsPlaceId"
         name="google_place_id"
-        value="{{ business.google_place_id or '' }}"
-        placeholder="e.g. https://share.google/..."
+        value="{{ google_profile_input if google_profile_input is defined else (business.google_place_id or '') }}"
+        placeholder="https://g.page/r/.../review"
         maxlength="255"
       />
       <p class="form-hint">
-        Required for the "Post on Google" button to work. Paste your Maps share URL or Place ID.
+        In your Google Business Profile, choose <b>Ask for reviews</b> and paste the link here. Customers will go directly to Google's review form; no API key is needed.
+        <a href="https://support.google.com/business/answer/3474122" target="_blank" rel="noopener">
+          How to get your review link →
+        </a>
       </p>
     </div>
 
@@ -112,37 +115,6 @@
       </button>
     </div>
   </form>
-
-  <!-- AI Training Data (Google Scraper) -->
-  <div style="margin-top:48px; padding-top:24px; border-top:1.5px dashed var(--line);">
-    <p class="chip-label" style="margin-bottom:12px;">AI Training Data</p>
-    <div class="hint">
-      <p>We can scrape your existing top Google Reviews to train the AI on what customers love about you (e.g. "famous garlic bread" or "Sarah the bartender").</p>
-      
-      {% if business.scraped_context %}
-        <div style="margin-top:16px; padding:12px; background:var(--paper-deep); border-radius:8px; border:1px solid var(--line);">
-          <p style="font-weight:600; margin-bottom:8px; font-size:14px;">Current Training Context:</p>
-          <pre style="font-family:var(--sans); font-size:13px; white-space:pre-wrap; color:var(--ink-soft); margin:0;">{{ business.scraped_context }}</pre>
-        </div>
-      {% endif %}
-
-      <div style="margin-top:20px;">
-        <button 
-          type="button" 
-          class="btn btn-secondary btn-sm" 
-          hx-post="/dashboard/settings/scrape" 
-          hx-swap="none"
-          hx-indicator="#scrapeIndicator"
-        >
-          Fetch Google Reviews
-        </button>
-        <span id="scrapeIndicator" class="htmx-indicator" style="margin-left:12px; font-size:14px; color:var(--ink-soft);">
-          Fetching (this may take a few seconds)...
-        </span>
-      </div>
-      <p class="form-hint" style="margin-top:8px;">Requires a valid Google Place ID saved above.</p>
-    </div>
-  </div>
 
   <!-- Danger Zone -->
   <div style="margin-top:48px; padding-top:24px; border-top:1.5px dashed var(--line);">

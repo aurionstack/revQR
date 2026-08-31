@@ -3,18 +3,28 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_signup(client, db_session):
+    review_link = "https://g.page/r/CdjQSncozrEtEAI/review"
     response = client.post(
         "/signup",
         data={
             "name": "New Business",
             "email": "new@example.com",
             "password": "strongpassword123",
+            "google_place_id": review_link,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         follow_redirects=False
     )
     # The endpoint should return a 302 Redirect (FastAPI returns 302 for RedirectResponse if status_code=302)
     assert response.status_code in (302, 303)
+
+    from app.models import Business
+    from sqlalchemy.future import select
+
+    result = await db_session.execute(
+        select(Business).filter(Business.email == "new@example.com")
+    )
+    assert result.scalar_one().google_place_id == review_link
     
     # Try duplicate signup
     response2 = client.post(

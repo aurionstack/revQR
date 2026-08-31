@@ -1897,13 +1897,19 @@ textarea::placeholder {
 }
 .standee-qr {
   padding: 20px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 .standee-qr img {
   width: 160px;
   height: 160px;
-  border-radius: 8px;
-  margin: 0 auto;
   display: block;
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: 8px;
 }
 .standee-instruction {
   font-family: var(--sans);
@@ -1988,16 +1994,5 @@ textarea::placeholder {
   .standee-layout { grid-template-columns: 1fr; }
   .wa-templates-grid { grid-template-columns: 1fr; }
   .wa-quick-row { grid-template-columns: 1fr; }
-}
-
-@media print {
-  .dash-sidebar,
-  .dash-mobile-nav,
-  .dash-mobile-menu,
-  .standee-controls,
-  .dash-header { display: none !important; }
-  .standee-layout { grid-template-columns: 1fr; }
-  .standee-preview-wrap { padding: 0; }
-  .standee-card { box-shadow: none; border: 1px solid #ccc; }
 }
 

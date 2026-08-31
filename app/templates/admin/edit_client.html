@@ -89,7 +89,7 @@
           </div>
         </div>
 
-        <!-- Brand Color & Google Place ID -->
+        <!-- Brand Color & Google review link -->
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
           <div class="wa-input-group">
             <label class="wa-label">Brand Color</label>
@@ -104,12 +104,13 @@
             </div>
           </div>
           <div class="wa-input-group">
-            <label class="wa-label">Google Place ID</label>
+            <label class="wa-label">Google Review Link</label>
             <input
               type="text"
               name="google_place_id"
               value="{{ client.google_place_id or '' }}"
-              placeholder="ChIJ..."
+              placeholder="https://g.page/r/.../review"
+              maxlength="255"
               class="wa-input"
             />
           </div>

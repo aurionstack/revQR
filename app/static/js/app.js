@@ -127,8 +127,11 @@
       c.className = "chip";
       c.type = "button";
       c.textContent = label;
+      c.dataset.chipBound = "true";
+      c.setAttribute("aria-pressed", "false");
       c.addEventListener("click", function () {
         c.classList.toggle("selected");
+        c.setAttribute("aria-pressed", c.classList.contains("selected") ? "true" : "false");
         updateChipsInput();
       });
       wrap.appendChild(c);
@@ -161,8 +164,12 @@
     var wrap = document.getElementById("chips");
     if (!wrap) return;
     wrap.querySelectorAll(".chip").forEach(function (c) {
+      if (c.dataset.chipBound === "true") return;
+      c.dataset.chipBound = "true";
+      c.setAttribute("aria-pressed", c.classList.contains("selected") ? "true" : "false");
       c.addEventListener("click", function () {
         c.classList.toggle("selected");
+        c.setAttribute("aria-pressed", c.classList.contains("selected") ? "true" : "false");
         var chipsInput = document.getElementById("chips-value");
         if (chipsInput) {
           var selected = [];
@@ -667,5 +674,4 @@
   });
 
 })();
-
 
