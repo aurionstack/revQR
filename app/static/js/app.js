@@ -239,6 +239,109 @@
     }
   }
 
+  function copyPlainText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+
+    return new Promise(function (resolve, reject) {
+      var tmp = document.createElement("textarea");
+      tmp.value = text;
+      tmp.setAttribute("readonly", "");
+      tmp.style.position = "fixed";
+      tmp.style.opacity = "0";
+      document.body.appendChild(tmp);
+      tmp.focus();
+      tmp.select();
+      try {
+        if (document.execCommand("copy")) resolve();
+        else reject(new Error("Copy command was rejected"));
+      } catch (error) {
+        reject(error);
+      } finally {
+        document.body.removeChild(tmp);
+      }
+    });
+  }
+
+  function manualReplyElements(reviewId) {
+    return {
+      box: document.getElementById("manual-reply-" + reviewId),
+      textarea: document.getElementById("manual-reply-text-" + reviewId),
+      trigger: document.querySelector('[aria-controls="manual-reply-' + reviewId + '"]'),
+    };
+  }
+
+  function setManualReplyOpen(reviewId, shouldOpen) {
+    var elements = manualReplyElements(reviewId);
+    if (!elements.box) return elements;
+    elements.box.hidden = !shouldOpen;
+    if (elements.trigger) {
+      elements.trigger.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+    }
+    return elements;
+  }
+
+  window.toggleManualReply = function (reviewId) {
+    var elements = manualReplyElements(reviewId);
+    if (!elements.box) return;
+    var shouldOpen = elements.box.hidden;
+    setManualReplyOpen(reviewId, shouldOpen);
+    if (shouldOpen && elements.textarea) elements.textarea.focus();
+  };
+
+  window.useReplyText = function (sourceId, reviewId) {
+    var source = document.getElementById(sourceId);
+    var elements = setManualReplyOpen(reviewId, true);
+    if (!source || !elements.textarea) return;
+    elements.textarea.value = source.textContent.trim();
+    elements.textarea.focus();
+    showToast("AI reply loaded — edit it before posting", "success");
+  };
+
+  window.copyReplyText = function (sourceId) {
+    var source = document.getElementById(sourceId);
+    if (!source) return;
+    copyPlainText(source.textContent.trim()).then(function () {
+      showToast("Reply copied!", "success");
+    }).catch(function () {
+      showToast("Could not copy the reply", "error");
+    });
+  };
+
+  window.copyManualReply = function (reviewId) {
+    var elements = manualReplyElements(reviewId);
+    var text = elements.textarea ? elements.textarea.value.trim() : "";
+    if (!text) {
+      showToast("Write a reply first", "error");
+      if (elements.textarea) elements.textarea.focus();
+      return false;
+    }
+    copyPlainText(text).then(function () {
+      showToast("Reply copied!", "success");
+    }).catch(function () {
+      showToast("Could not copy the reply", "error");
+    });
+    return true;
+  };
+
+  window.copyAndOpenGoogleReplies = function (reviewId) {
+    var elements = manualReplyElements(reviewId);
+    var text = elements.textarea ? elements.textarea.value.trim() : "";
+    if (!text) {
+      showToast("Write or select a reply first", "error");
+      if (elements.textarea) elements.textarea.focus();
+      return false;
+    }
+
+    copyPlainText(text).then(function () {
+      showToast("Reply copied — paste it into the matching Google review", "success", 4200);
+    }).catch(function () {
+      showToast("Google opened, but the reply could not be copied", "error", 4200);
+    });
+    return true;
+  };
+
 
   /* ────────────────────────────────────────────────────────────────────────
      Post on Google Redirect
@@ -674,4 +777,3 @@
   });
 
 })();
-

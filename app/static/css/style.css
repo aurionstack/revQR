@@ -1816,6 +1816,30 @@ textarea::placeholder {
   line-height: 1.5;
   margin-bottom: 8px;
 }
+.ai-reply-actions,
+.manual-reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.manual-reply-box {
+  margin-top: 12px;
+  padding: 16px;
+  background: var(--paper-deep);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+}
+.manual-reply-box textarea {
+  min-height: 104px;
+  resize: vertical;
+  margin-bottom: 10px;
+  background: var(--paper);
+}
+.manual-reply-hint {
+  margin-top: 9px;
+  line-height: 1.45;
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════════════

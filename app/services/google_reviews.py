@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 
 PLACE_ID_PATTERN = re.compile(r"(?:ChIJ|GhIJ|Eic|Iho)[A-Za-z0-9_-]+")
+GOOGLE_BUSINESS_REVIEWS_URL = "https://business.google.com/reviews"
 G_PAGE_REVIEW_PATH = re.compile(
     r"^/(?:r/)?(?P<code>[A-Za-z0-9_-]+)/review/?$",
     re.IGNORECASE,

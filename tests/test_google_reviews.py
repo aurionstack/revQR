@@ -1,6 +1,7 @@
 import pytest
 
 from app.services.google_reviews import (
+    GOOGLE_BUSINESS_REVIEWS_URL,
     GoogleReviewLinkError,
     google_review_destination,
     normalize_google_review_link,
@@ -8,6 +9,10 @@ from app.services.google_reviews import (
 
 
 pytestmark = pytest.mark.no_db
+
+
+def test_business_reply_destination_opens_google_review_manager():
+    assert GOOGLE_BUSINESS_REVIEWS_URL == "https://business.google.com/reviews"
 
 
 def test_accepts_current_g_page_review_link():

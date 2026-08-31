@@ -7,9 +7,14 @@
   <div class="ai-reply-option">
     <div class="ai-reply-label">{{ label }}</div>
     <div class="ai-reply-text" id="reply-{{ review_id }}-{{ key }}">{{ replies[key] }}</div>
-    <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-{{ key }}')">
-      Copy
-    </button>
+    <div class="ai-reply-actions">
+      <button type="button" class="btn btn-primary btn-sm btn-inline" onclick="useReplyText('reply-{{ review_id }}-{{ key }}', '{{ review_id }}')">
+        Use &amp; edit
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-{{ key }}')">
+        Copy
+      </button>
+    </div>
   </div>
   {% endif %}
   {% endfor %}
@@ -18,29 +23,21 @@
   <div class="ai-reply-option">
     <div class="ai-reply-label">🔍 SEO-Rich</div>
     <div class="ai-reply-text" id="reply-{{ review_id }}-seo">{{ replies.seo_rich }}</div>
-    <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-seo')">
-      Copy
-    </button>
+    <div class="ai-reply-actions">
+      <button type="button" class="btn btn-primary btn-sm btn-inline" onclick="useReplyText('reply-{{ review_id }}-seo', '{{ review_id }}')">Use &amp; edit</button>
+      <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-seo')">Copy</button>
+    </div>
   </div>
   {% elif rating < 4 and replies.get("deescalate") %}
   <div class="ai-reply-option">
     <div class="ai-reply-label">🕊 De-escalate</div>
     <div class="ai-reply-text" id="reply-{{ review_id }}-de">{{ replies.deescalate }}</div>
-    <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-de')">
-      Copy
-    </button>
+    <div class="ai-reply-actions">
+      <button type="button" class="btn btn-primary btn-sm btn-inline" onclick="useReplyText('reply-{{ review_id }}-de', '{{ review_id }}')">Use &amp; edit</button>
+      <button type="button" class="btn btn-secondary btn-sm btn-inline" onclick="copyReplyText('reply-{{ review_id }}-de')">Copy</button>
+    </div>
   </div>
   {% endif %}
 
-  <p class="hint" style="margin-top:8px;">Copy a reply and paste it on your Google Business Profile.</p>
+  <p class="hint" style="margin-top:8px;">Use a suggestion as-is or edit it in the manual reply box before opening Google Reviews.</p>
 </div>
-
-<script>
-function copyReplyText(elId) {
-  var el = document.getElementById(elId);
-  if (!el) return;
-  navigator.clipboard.writeText(el.textContent.trim()).then(function() {
-    showToast('Reply copied!', 'success');
-  });
-}
-</script>

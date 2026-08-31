@@ -17,7 +17,11 @@ from app.models import Business, Scan, Review, Feedback
 from app.services.auth import get_current_business
 from app.config import settings
 from app.main import TEMPLATES_DIR
-from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
+from app.services.google_reviews import (
+    GOOGLE_BUSINESS_REVIEWS_URL,
+    GoogleReviewLinkError,
+    normalize_google_review_link,
+)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -150,6 +154,7 @@ async def dashboard_reviews(
         "total_feedback": total_feedback,
         "reviews": reviews,
         "feedback_items": feedback_items,
+        "google_business_reviews_url": GOOGLE_BUSINESS_REVIEWS_URL,
     })
 
 # ── AI Review Reply (HTMX endpoint) ──────────────────────────────────────────

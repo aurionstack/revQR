@@ -51,7 +51,7 @@
           Notes: {{ review.customer_notes[:60] }}{% if review.customer_notes|length > 60 %}…{% endif %}
         </div>
         {% endif %}
-        <!-- AI Reply Button -->
+        <!-- Business reply actions -->
         <div class="review-actions-row">
           <button
             type="button"
@@ -64,7 +64,44 @@
           >
             🤖 AI Reply
           </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm btn-inline ai-reply-trigger"
+            onclick="toggleManualReply('{{ review.id }}')"
+            aria-controls="manual-reply-{{ review.id }}"
+            aria-expanded="false"
+          >
+            ✍ Manual Reply
+          </button>
           <span class="htmx-indicator" id="ai-reply-loading-{{ review.id }}" style="font-size:12px; color:var(--ink-faint);">Generating...</span>
+        </div>
+        <div class="manual-reply-box" id="manual-reply-{{ review.id }}" hidden>
+          <label class="form-label" for="manual-reply-text-{{ review.id }}">Reply as {{ business.name }}</label>
+          <textarea
+            id="manual-reply-text-{{ review.id }}"
+            rows="4"
+            maxlength="1500"
+            placeholder="Write a personal reply to this customer..."
+          ></textarea>
+          <div class="manual-reply-actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm btn-inline"
+              onclick="copyManualReply('{{ review.id }}')"
+            >
+              Copy only
+            </button>
+            <a
+              class="btn btn-primary btn-sm btn-inline"
+              href="{{ google_business_reviews_url }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              onclick="return copyAndOpenGoogleReplies('{{ review.id }}')"
+            >
+              Copy &amp; Open Google Reviews ↗
+            </a>
+          </div>
+          <p class="hint manual-reply-hint">Your reply is copied. Google opens in a new tab so you can select the matching customer review and press Reply.</p>
         </div>
         <div id="ai-reply-{{ review.id }}"></div>
       </div>
