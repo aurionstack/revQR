@@ -19,12 +19,13 @@ async def get_qr_image(
     source: str = "",
     color: str = "",
     badge: int = 1,
+    label: int = 0,
     business: Business = Depends(get_current_business),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Serve the branded QR code for a business as PNG or SVG.
-    Supports brand colors, center badge, staff/table source tracking, and footer identification.
+    Supports brand colors, center badge, staff/table source tracking, and optional footer identification.
     """
     if ext not in ["png", "svg"]:
         raise HTTPException(status_code=400, detail="Invalid format. Use png or svg.")
@@ -52,17 +53,18 @@ async def get_qr_image(
     # Determine QR color (default to solid black for maximum scannability and contrast)
     fill_color = color.strip() if color.strip() else "#000000"
 
-
-    # Bottom label text (shows business name and custom source/table below the QR)
-    source_label = f" · {source.strip().replace('_', ' ').upper()}" if source.strip() else ""
-    label_text = f"{target_business.name.upper()}{source_label}"
+    # Bottom label text (only if explicitly requested with label=1)
+    label_text = None
+    if label == 1:
+        source_label = f" · {source.strip().replace('_', ' ').upper()}" if source.strip() else ""
+        label_text = f"{target_business.name.upper()}{source_label}"
 
     # Generate QR Code bytes
     qr_bytes = generate_qr_code(
         target_url,
         format=ext,
         fill_color=fill_color,
-        business_name=target_business.name,
+        business_name=target_business.name if label == 1 else None,
         label_text=label_text,
     )
 

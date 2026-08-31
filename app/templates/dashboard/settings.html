@@ -62,24 +62,53 @@
       <p class="form-hint">This color brands your customer-facing review page and QR code.</p>
     </div>
 
-    <!-- Google Place ID -->
-    <div class="form-group">
-      <label class="form-label" for="settingsPlaceId">Google Place ID</label>
-      <input
-        class="form-input"
-        type="text"
-        id="settingsPlaceId"
-        name="google_place_id"
-        value="{{ business.google_place_id or '' }}"
-        placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
-        maxlength="255"
-      />
-      <p class="form-hint">
-        Required for the "Post on Google" button to work.
-        <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">
-          How to find your Place ID →
-        </a>
-      </p>
+    <!-- Google Place ID with Instant URL-to-PlaceID Converter -->
+    <div class="form-group" style="background:var(--paper-deep); border:1.5px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:24px;">
+      <label class="form-label" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <span style="font-weight:700;">🔗 Google Place ID &amp; Profile Link</span>
+        <span style="background:var(--accent-soft); color:var(--accent-deep); font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px;">Smart Auto-Converter</span>
+      </label>
+      
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:4px;">
+          Paste Google Maps or Google Business Profile URL:
+        </label>
+        <div style="display:flex; gap:8px;">
+          <input
+            type="text"
+            id="mapsUrlInput"
+            class="form-input"
+            placeholder="e.g. https://maps.app.goo.gl/... or https://g.page/..."
+            style="flex:1; font-size:13px;"
+          />
+          <button type="button" class="btn btn-primary btn-sm" id="convertBtn" onclick="convertMapsLink()" style="white-space:nowrap; padding:0 16px;">
+            Convert to Place ID
+          </button>
+        </div>
+        <p id="convertFeedback" style="font-size:12px; margin-top:6px; display:none;"></p>
+      </div>
+
+      <div>
+        <label class="form-label" for="settingsPlaceId" style="font-size:12px; color:var(--ink-soft); margin-bottom:4px;">
+          Google Place ID (Saved for Redirects)
+        </label>
+        <input
+          class="form-input"
+          type="text"
+          id="settingsPlaceId"
+          name="google_place_id"
+          value="{{ business.google_place_id or '' }}"
+          placeholder="e.g. ChIJN1t_tDeuEmsRUsoyG83frY4"
+          maxlength="255"
+          style="font-family:var(--mono); font-size:13px;"
+        />
+        <p class="form-hint" style="margin-top:6px;">
+          Required for the "Post on Google" button to redirect directly to your review box.
+          <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">
+            Manual Place ID Finder →
+          </a>
+        </p>
+      </div>
     </div>
 
     <!-- Phone -->
@@ -157,4 +186,58 @@
     </div>
   </div>
 </div>
+
+<script>
+async function convertMapsLink() {
+  var input = document.getElementById('mapsUrlInput');
+  var feedback = document.getElementById('convertFeedback');
+  var placeIdInput = document.getElementById('settingsPlaceId');
+  var btn = document.getElementById('convertBtn');
+  var val = input ? input.value.trim() : '';
+
+  if (!val) {
+    if (feedback) {
+      feedback.style.display = 'block';
+      feedback.style.color = 'var(--negative)';
+      feedback.innerText = 'Please paste a Google Maps or Business Profile URL first.';
+    }
+    return;
+  }
+
+  var originalBtnText = btn.innerText;
+  btn.innerText = 'Converting...';
+  btn.disabled = true;
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.style.color = 'var(--ink-soft)';
+    feedback.innerText = '⏳ Resolving Google Place ID...';
+  }
+
+  try {
+    var formData = new FormData();
+    formData.append('url', val);
+
+    var res = await fetch('/dashboard/settings/convert-place-id', {
+      method: 'POST',
+      body: formData
+    });
+    var data = await res.json();
+
+    if (data.success && data.place_id) {
+      placeIdInput.value = data.place_id;
+      feedback.style.color = 'var(--positive)';
+      feedback.innerHTML = '✓ <b>Place ID Found:</b> <code>' + data.place_id + '</code>' + (data.name ? ' (' + data.name + ')' : '') + '. Click "Save Changes" below to save.';
+    } else {
+      feedback.style.color = 'var(--negative)';
+      feedback.innerText = '✕ ' + (data.error || 'Could not find Place ID from this link. Please check the URL.');
+    }
+  } catch (err) {
+    feedback.style.color = 'var(--negative)';
+    feedback.innerText = '✕ Failed to connect to converter. Please verify your link.';
+  } finally {
+    btn.innerText = originalBtnText;
+    btn.disabled = false;
+  }
+}
+</script>
 {% endblock %}

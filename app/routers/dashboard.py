@@ -357,7 +357,17 @@ async def dashboard_settings_post(
 
     return RedirectResponse(url="/dashboard/settings", status_code=status.HTTP_302_FOUND)
 
-from app.services.scraper import fetch_google_reviews
+from app.services.scraper import fetch_google_reviews, resolve_google_place_id
+
+@router.post("/settings/convert-place-id")
+async def dashboard_convert_place_id(
+    request: Request,
+    url: str = Form(...),
+    business: Business = Depends(get_current_business)
+):
+    """Convert a Google Maps or Google Business Profile URL to a Place ID."""
+    result = await resolve_google_place_id(url)
+    return JSONResponse(result)
 
 @router.post("/settings/scrape")
 async def dashboard_settings_scrape(
