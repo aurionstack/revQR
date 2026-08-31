@@ -18,9 +18,8 @@ from app.services.auth import get_current_business
 from app.config import settings
 from app.main import TEMPLATES_DIR
 from app.services.google_reviews import (
-    GOOGLE_BUSINESS_REVIEWS_URL,
     GoogleReviewLinkError,
-    google_business_profile_destination,
+    google_business_reviews_destination,
     normalize_google_review_link,
 )
 
@@ -155,14 +154,19 @@ async def dashboard_reviews(
         "total_feedback": total_feedback,
         "reviews": reviews,
         "feedback_items": feedback_items,
-        "google_business_reviews_url": (
-            google_business_profile_destination(
-                business.google_place_id,
-                business.name,
-            )
-            or GOOGLE_BUSINESS_REVIEWS_URL
-        ),
     })
+
+
+@router.get("/reviews/google-profile")
+async def dashboard_google_reviews(
+    business: Business = Depends(get_current_business),
+):
+    """Open the review section for the Google profile connected to this account."""
+    destination = await google_business_reviews_destination(
+        business.google_place_id,
+        business.name,
+    )
+    return RedirectResponse(destination, status_code=status.HTTP_302_FOUND)
 
 # ── AI Review Reply (HTMX endpoint) ──────────────────────────────────────────
 
