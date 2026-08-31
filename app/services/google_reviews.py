@@ -70,3 +70,32 @@ def google_review_destination(stored_value: str | None) -> str | None:
     if PLACE_ID_PATTERN.fullmatch(value):
         return f"https://search.google.com/local/writereview?{urlencode({'placeid': value})}"
     return normalize_google_review_link(value)
+
+
+def google_business_profile_destination(stored_value: str | None) -> str | None:
+    """Return the specific business profile associated with a stored review link."""
+    value = (stored_value or "").strip()
+    if not value:
+        return None
+
+    if PLACE_ID_PATTERN.fullmatch(value):
+        return "https://www.google.com/maps/search/?" + urlencode(
+            {"api": "1", "query": "Google", "query_place_id": value}
+        )
+
+    normalized = normalize_google_review_link(value)
+    parsed = urlparse(normalized)
+
+    if parsed.hostname == "g.page":
+        # The same g.page code without `/review` opens this exact business's
+        # Google profile and reviews panel instead of the customer write form.
+        profile_path = parsed.path.removesuffix("/review").rstrip("/") + "/"
+        return urlunparse(("https", "g.page", profile_path, "", "", ""))
+
+    place_id = parse_qs(parsed.query).get("placeid", [""])[0].strip()
+    if PLACE_ID_PATTERN.fullmatch(place_id):
+        return "https://www.google.com/maps/search/?" + urlencode(
+            {"api": "1", "query": "Google", "query_place_id": place_id}
+        )
+
+    return None

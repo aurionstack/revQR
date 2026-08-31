@@ -3,6 +3,7 @@ import pytest
 from app.services.google_reviews import (
     GOOGLE_BUSINESS_REVIEWS_URL,
     GoogleReviewLinkError,
+    google_business_profile_destination,
     google_review_destination,
     normalize_google_review_link,
 )
@@ -19,6 +20,9 @@ def test_accepts_current_g_page_review_link():
     link = "https://g.page/r/CdjQSncozrEtEAI/review"
     assert normalize_google_review_link(link) == link
     assert google_review_destination(link) == link
+    assert google_business_profile_destination(link) == (
+        "https://g.page/r/CdjQSncozrEtEAI/"
+    )
 
 
 @pytest.mark.parametrize(
@@ -40,6 +44,10 @@ def test_keeps_legacy_place_ids_working():
     assert normalize_google_review_link(place_id) == place_id
     assert google_review_destination(place_id) == (
         "https://search.google.com/local/writereview?placeid=" + place_id
+    )
+    assert google_business_profile_destination(place_id) == (
+        "https://www.google.com/maps/search/"
+        "?api=1&query=Google&query_place_id=" + place_id
     )
 
 
