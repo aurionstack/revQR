@@ -40,10 +40,14 @@ async def test_review_rate_post(client, test_business, test_scan):
     assert "What stood out?" in response.text
 
 @pytest.mark.asyncio
-@patch("app.routers.review.generate_review")
+@patch("app.routers.review.generate_review_variations")
 async def test_review_generate(mock_generate_review, client, test_business, test_scan, db_session: AsyncSession):
     # Mock the AI service
-    mock_generate_review.return_value = "This is a mocked AI generated review."
+    mock_generate_review.return_value = {
+        "punchy": "This is a mocked short review.",
+        "detailed": "This is a mocked AI generated review.",
+        "warm": "This is a mocked warm review.",
+    }
     
     response = client.post(
         f"/review/{test_business.slug}/generate",

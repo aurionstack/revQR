@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # Google Gemini AI
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 
     # JWT Authentication
     JWT_SECRET_KEY: str = "change-me-in-production"
