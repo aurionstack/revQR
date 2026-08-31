@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, desc, or_
+from sqlalchemy import delete, func, desc, or_
 
 from app.database import get_db
 from app.models import Business, Scan, Review, Feedback
@@ -369,7 +369,10 @@ async def delete_client(
     if not biz:
         raise HTTPException(status_code=404, detail="Client not found")
 
-    await db.delete(biz)
+    # Use a SQL DELETE so PostgreSQL's ON DELETE CASCADE removes payments,
+    # reviews, scans, and feedback atomically. ORM instance deletion previously
+    # attempted payments.business_id = NULL and violated its NOT NULL constraint.
+    await db.execute(delete(Business).where(Business.id == client_id))
     await db.commit()
 
     return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)

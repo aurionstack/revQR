@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     # App
     APP_URL: str = "http://localhost:8000"
 
+    # Initial super-admin seed. Leave ADMIN_PASSWORD empty after the account
+    # exists so application restarts never reset its password.
+    ADMIN_NAME: str = "Admin User"
+    ADMIN_EMAIL: str = "aurionstack@gmail.com"
+    ADMIN_PASSWORD: str = ""
+    ADMIN_SLUG: str = "admin"
+
     # Razorpay Payment
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""

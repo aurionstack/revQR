@@ -40,10 +40,21 @@ class Business(Base):
     )
 
     # Relationships
-    scans: Mapped[list["Scan"]] = relationship(back_populates="business", lazy="selectin")
-    reviews: Mapped[list["Review"]] = relationship(back_populates="business", lazy="selectin")
-    feedback_items: Mapped[list["Feedback"]] = relationship(back_populates="business", lazy="selectin")
-    payments: Mapped[list["Payment"]] = relationship(back_populates="business", lazy="selectin")
+    # Child tables already use ON DELETE CASCADE. passive_deletes="all" stops
+    # SQLAlchemy from trying to set their non-nullable business_id to NULL when
+    # a business is removed.
+    scans: Mapped[list["Scan"]] = relationship(
+        back_populates="business", lazy="selectin", passive_deletes="all"
+    )
+    reviews: Mapped[list["Review"]] = relationship(
+        back_populates="business", lazy="selectin", passive_deletes="all"
+    )
+    feedback_items: Mapped[list["Feedback"]] = relationship(
+        back_populates="business", lazy="selectin", passive_deletes="all"
+    )
+    payments: Mapped[list["Payment"]] = relationship(
+        back_populates="business", lazy="selectin", passive_deletes="all"
+    )
 
     def __repr__(self) -> str:
         return f"<Business {self.name} ({self.slug})>"
