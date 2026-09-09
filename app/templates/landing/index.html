@@ -1,17 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}revQR — Turn Every Customer Into a Google Review{% endblock %}
-{% block meta_description %}Get a branded QR code, let customers scan it, AI generates a polished Google review in 30 seconds. Built for Indian SMBs.{% endblock %}
+{% block title %}Google Review QR Code &amp; AI Review Assistant | revQR{% endblock %}
+{% block meta_description %}Create branded Google review QR codes, collect honest customer feedback, and help customers draft relevant reviews in 30 seconds. Built for Indian local businesses.{% endblock %}
+{% block robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}
+{% block canonical_meta %}<link rel="canonical" href="{{ site_url }}/" />{% endblock %}
+{% block social_meta %}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="revQR" />
+  <meta property="og:locale" content="en_IN" />
+  <meta property="og:title" content="Google Review QR Code &amp; AI Review Assistant | revQR" />
+  <meta property="og:description" content="Turn customer visits into honest, relevant Google reviews with a branded QR flow built for local businesses." />
+  <meta property="og:url" content="{{ site_url }}/" />
+  <meta property="og:image" content="{{ site_url }}/static/og-revqr.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="revQR Google review QR code platform" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Google Review QR Code &amp; AI Review Assistant | revQR" />
+  <meta name="twitter:description" content="Branded QR codes and AI-assisted review drafts for local businesses." />
+  <meta name="twitter:image" content="{{ site_url }}/static/og-revqr.png" />
+{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">{{ structured_data | safe }}</script>
+{% endblock %}
 {% block body_class %}page-full{% endblock %}
 
 {% block content %}
 <!-- Navigation -->
-<nav class="landing-nav">
+<nav class="landing-nav" aria-label="Primary navigation">
   <div class="landing-nav-inner">
-    <a href="/" class="landing-logo">revQR</a>
+    <a href="/" class="landing-logo" aria-label="revQR home">revQR</a>
     <div class="landing-nav-links">
-      <a href="#how-it-works">How It Works</a>
-      <a href="#pricing">Pricing</a>
+      <a href="/features">Features</a>
+      <a href="/pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
       <a href="/login">Log In</a>
       <a href="/signup" class="btn btn-primary btn-sm btn-inline" style="text-decoration:none;">
         Get Started
@@ -21,6 +43,7 @@
 
 </nav>
 
+<main id="main-content">
 <!-- Hero -->
 <section class="landing-hero">
   <p class="eyebrow" style="margin-bottom:16px;">For restaurants, cafés, salons &amp; local businesses</p>
@@ -58,7 +81,7 @@
         <h2 class="q">How was your visit?</h2>
         <div style="display:flex; justify-content:center; gap:6px; margin-bottom:12px;">
           {% for i in range(5) %}
-          <svg width="28" height="28" viewBox="0 0 24 24">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z"
               fill="{{ 'var(--accent)' if i < 4 else 'none' }}"
               stroke="{{ 'var(--accent-deep)' if i < 4 else 'var(--ink-faint)' }}"
@@ -73,7 +96,7 @@
       </div>
       <div class="perf" style="margin-top:0;"></div>
       <div class="ticket-footer">
-        <p class="meta-line">QRREVIEWS.APP</p>
+        <p class="meta-line">REVQR.TECH</p>
       </div>
     </div>
     <div class="torn-bottom"></div>
@@ -82,7 +105,7 @@
 
 <!-- How It Works -->
 <section class="landing-section" id="how-it-works">
-  <p class="landing-section-title">How It Works</p>
+  <h2 class="landing-section-title">How revQR works</h2>
   <div class="steps-grid">
     <div class="step-card">
       <div class="step-number">01</div>
@@ -102,9 +125,33 @@
   </div>
 </section>
 
+<!-- Product capabilities -->
+<section class="landing-section landing-copy-section" aria-labelledby="review-growth-heading">
+  <div class="landing-copy-intro">
+    <p class="eyebrow">Google review growth, without the friction</p>
+    <h2 id="review-growth-heading">One QR code connects customer feedback to your Google Business Profile</h2>
+    <p>revQR gives restaurants, cafés, salons, clinics, hotels, retailers, and service businesses a fast review flow. Customers scan your branded code, choose the details that mattered, and receive an editable draft based on their actual experience.</p>
+  </div>
+  <div class="feature-summary-grid">
+    <article class="feature-summary-card">
+      <h3>Branded Google review QR code</h3>
+      <p>Download high-resolution QR artwork or a complete counter standee with your business name, logo, colors, and optional table or location tag.</p>
+    </article>
+    <article class="feature-summary-card">
+      <h3>Relevant AI-assisted drafts</h3>
+      <p>Selected highlights and customer notes guide the draft, while customers remain in control and can edit every word before posting.</p>
+    </article>
+    <article class="feature-summary-card">
+      <h3>Review and scan analytics</h3>
+      <p>Track scans, completed drafts, ratings, and source tags to understand which tables, counters, teams, or locations drive engagement.</p>
+    </article>
+  </div>
+  <p class="section-link"><a href="/features">Explore every revQR feature →</a></p>
+</section>
+
 <!-- Why It Works -->
 <section class="landing-section" style="text-align:center;">
-  <p class="landing-section-title">Why Businesses Love It</p>
+  <h2 class="landing-section-title">Why local businesses use it</h2>
   <div class="stats-grid" style="max-width:640px; margin:0 auto;">
     <div class="stat-card">
       <div class="stat-label">Time to review</div>
@@ -124,7 +171,7 @@
 
 <!-- Pricing -->
 <section class="landing-section" id="pricing" style="text-align:center;">
-  <p class="landing-section-title">Simple Pricing</p>
+  <h2 class="landing-section-title">Simple annual pricing</h2>
   <p style="color:var(--ink-soft); margin:-12px auto 24px; max-width:560px;">All plans include unlimited scans, AI review drafts, analytics, and downloadable branded QR artwork.</p>
   <div class="plan-grid" style="max-width:760px; margin:0 auto; text-align:left;">
     <article class="plan-card">
@@ -144,6 +191,35 @@
     </article>
   </div>
   <p class="payment-note">Optional physical branded QR stands are ₹249 each, including delivery.</p>
+  <p class="section-link"><a href="/pricing">Compare plans and what is included →</a></p>
+</section>
+
+<!-- FAQ -->
+<section class="landing-section faq-section" id="faq" aria-labelledby="faq-heading">
+  <p class="eyebrow">Common questions</p>
+  <h2 id="faq-heading">Google review QR code FAQ</h2>
+  <div class="faq-list">
+    <details>
+      <summary>What does a Google review QR code do?</summary>
+      <p>It gives customers a scannable path from your physical location to a short feedback flow and then to the review section of your connected Google Business Profile.</p>
+    </details>
+    <details>
+      <summary>Do customers need to install an app?</summary>
+      <p>No. revQR runs in the phone browser, so customers can scan with their camera and complete the flow without downloading anything.</p>
+    </details>
+    <details>
+      <summary>Does revQR post reviews automatically?</summary>
+      <p>No. revQR creates an editable draft from the customer’s selected rating, highlights, and notes. The customer chooses what to copy and personally submits it to Google.</p>
+    </details>
+    <details>
+      <summary>Can I use different QR codes for tables or locations?</summary>
+      <p>Yes. Add an optional table, counter, staff, or location tag to measure where scans and completed review drafts originate.</p>
+    </details>
+    <details>
+      <summary>Can I download the full QR standee design?</summary>
+      <p>Yes. You can customize and download a high-resolution standee image, or order an optional physical branded stand for ₹249 per item.</p>
+    </details>
+  </div>
 </section>
 
 <!-- CTA -->
@@ -154,9 +230,17 @@
     Create Your Account
   </a>
 </section>
+</main>
 
 <!-- Footer -->
 <footer class="landing-footer">
-  <p>© {{ current_year if current_year else '2026' }} revQR · Built for Indian SMBs</p>
+  <nav class="landing-footer-links" aria-label="Footer">
+    <a href="/">Home</a>
+    <a href="/features">Features</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/signup">Get started</a>
+    <a href="/login">Log in</a>
+  </nav>
+  <p>© {{ current_year if current_year else '2026' }} revQR · Google review QR tools for Indian local businesses</p>
 </footer>
 {% endblock %}

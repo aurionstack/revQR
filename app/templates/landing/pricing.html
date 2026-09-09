@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}revQR Pricing — Google Review QR Codes from ₹999/year{% endblock %}
+{% block meta_description %}Simple revQR pricing for local businesses: ₹999 for one year or ₹1,599 for two years. Includes unlimited scans, AI-assisted review drafts, analytics, and QR downloads.{% endblock %}
+{% block robots %}index, follow, max-image-preview:large, max-snippet:-1{% endblock %}
+{% block canonical_meta %}<link rel="canonical" href="{{ site_url }}/pricing" />{% endblock %}
+{% block social_meta %}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="revQR" />
+  <meta property="og:locale" content="en_IN" />
+  <meta property="og:title" content="revQR Pricing — Google Review QR Codes from ₹999/year" />
+  <meta property="og:description" content="Choose one year for ₹999 or save ₹399 with two years for ₹1,599. No per-scan charge." />
+  <meta property="og:url" content="{{ site_url }}/pricing" />
+  <meta property="og:image" content="{{ site_url }}/static/og-revqr.png" />
+  <meta property="og:image:alt" content="revQR annual pricing for local businesses" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="revQR Pricing from ₹999/year" />
+  <meta name="twitter:description" content="Unlimited scans, review drafts, analytics, and branded QR downloads." />
+  <meta name="twitter:image" content="{{ site_url }}/static/og-revqr.png" />
+{% endblock %}
+{% block structured_data %}<script type="application/ld+json">{{ structured_data | safe }}</script>{% endblock %}
+{% block body_class %}page-full{% endblock %}
+
+{% block content %}
+<nav class="landing-nav" aria-label="Primary navigation">
+  <div class="landing-nav-inner">
+    <a href="/" class="landing-logo" aria-label="revQR home">revQR</a>
+    <div class="landing-nav-links">
+      <a href="/features">Features</a>
+      <a href="/pricing" aria-current="page">Pricing</a>
+      <a href="/login">Log In</a>
+      <a href="/signup" class="btn btn-primary btn-sm btn-inline" style="text-decoration:none;">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main-content">
+  <header class="public-page-hero">
+    <p class="eyebrow">Simple, transparent pricing</p>
+    <h1>One Google review QR platform. Two straightforward plans.</h1>
+    <p>Every subscription includes the complete revQR workflow. Choose the term that fits your business—there are no per-scan charges.</p>
+  </header>
+
+  <section class="landing-section pricing-page-section" aria-labelledby="pricing-options-heading">
+    <h2 class="landing-section-title" id="pricing-options-heading">Choose your subscription</h2>
+    <div class="plan-grid public-plan-grid">
+      <article class="plan-card">
+        <p class="eyebrow">1 Year</p>
+        <div class="plan-price"><span>₹</span>999</div>
+        <p class="plan-period">₹83/month equivalent · billed once</p>
+        <p class="plan-saving">A flexible annual plan for getting started</p>
+        <a href="/signup" class="btn btn-primary">Choose one year</a>
+      </article>
+      <article class="plan-card featured">
+        <span class="plan-badge">Best value · save ₹399</span>
+        <p class="eyebrow">2 Years</p>
+        <div class="plan-price"><span>₹</span>1,599</div>
+        <p class="plan-period">₹67/month equivalent · billed once</p>
+        <p class="plan-saving">20% less than buying two annual plans</p>
+        <a href="/signup" class="btn btn-accent">Choose two years</a>
+      </article>
+    </div>
+  </section>
+
+  <section class="landing-section included-section" aria-labelledby="included-heading">
+    <div>
+      <p class="eyebrow">Included in both plans</p>
+      <h2 id="included-heading">Everything needed to run your review QR workflow</h2>
+    </div>
+    <ul class="included-list">
+      <li>Unlimited customer scans</li>
+      <li>Relevant AI-assisted review drafts</li>
+      <li>Multiple selectable customer highlights</li>
+      <li>Google Business Profile review handoff</li>
+      <li>Scan and review analytics</li>
+      <li>Source tracking for tables and locations</li>
+      <li>Branded PNG and SVG QR downloads</li>
+      <li>High-resolution standee image download</li>
+    </ul>
+  </section>
+
+  <section class="landing-section physical-stand-section">
+    <div>
+      <p class="eyebrow">Optional physical add-on</p>
+      <h2>Branded QR stand — ₹249 per item</h2>
+      <p>Order additional physical stands after activating a subscription. Use them on counters, reception desks, or individual tables while keeping source tags separate.</p>
+    </div>
+    <a href="/signup" class="btn btn-primary btn-inline">Create your account</a>
+  </section>
+
+  <section class="landing-section faq-section" aria-labelledby="pricing-faq-heading">
+    <p class="eyebrow">Pricing questions</p>
+    <h2 id="pricing-faq-heading">Before you subscribe</h2>
+    <div class="faq-list">
+      <details><summary>Is there a limit on QR scans?</summary><p>No. Both subscription terms include unlimited scans for the active business account.</p></details>
+      <details><summary>What happens after the subscription term?</summary><p>Your paid access continues through the subscription expiry date. Renew to keep paid QR and analytics features active after that date.</p></details>
+      <details><summary>Is the physical stand required?</summary><p>No. Digital QR and full standee image downloads are included. The ₹249 physical stand is an optional add-on.</p></details>
+      <details><summary>Can I start without a credit card?</summary><p>Yes. Account creation does not require a card; payment is requested when you activate a subscription.</p></details>
+    </div>
+  </section>
+
+  <section class="landing-cta">
+    <h2>Ready to create your review QR code?</h2>
+    <p>Set up your business profile first, then choose your plan when you are ready to activate.</p>
+    <a href="/signup" class="btn btn-primary btn-inline">Get started</a>
+  </section>
+</main>
+
+<footer class="landing-footer">
+  <nav class="landing-footer-links" aria-label="Footer">
+    <a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/signup">Get started</a><a href="/login">Log in</a>
+  </nav>
+  <p>© {{ current_year }} revQR · Google review QR tools for Indian local businesses</p>
+</footer>
+{% endblock %}

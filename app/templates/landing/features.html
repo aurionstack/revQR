@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Google Review QR Code Features for Local Businesses | revQR{% endblock %}
+{% block meta_description %}Explore revQR features: branded Google review QR codes, relevant AI-assisted drafts, source tracking, analytics, private feedback, and downloadable standees.{% endblock %}
+{% block robots %}index, follow, max-image-preview:large, max-snippet:-1{% endblock %}
+{% block canonical_meta %}<link rel="canonical" href="{{ site_url }}/features" />{% endblock %}
+{% block social_meta %}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="revQR" />
+  <meta property="og:locale" content="en_IN" />
+  <meta property="og:title" content="Google Review QR Code Features for Local Businesses | revQR" />
+  <meta property="og:description" content="Branded QR codes, customer-led AI review drafts, analytics, private feedback, and printable standees in one workflow." />
+  <meta property="og:url" content="{{ site_url }}/features" />
+  <meta property="og:image" content="{{ site_url }}/static/og-revqr.png" />
+  <meta property="og:image:alt" content="revQR product features for Google review collection" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Google Review QR Code Features | revQR" />
+  <meta name="twitter:description" content="A complete Google review QR workflow for local businesses." />
+  <meta name="twitter:image" content="{{ site_url }}/static/og-revqr.png" />
+{% endblock %}
+{% block structured_data %}<script type="application/ld+json">{{ structured_data | safe }}</script>{% endblock %}
+{% block body_class %}page-full{% endblock %}
+
+{% block content %}
+<nav class="landing-nav" aria-label="Primary navigation">
+  <div class="landing-nav-inner">
+    <a href="/" class="landing-logo" aria-label="revQR home">revQR</a>
+    <div class="landing-nav-links">
+      <a href="/features" aria-current="page">Features</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Log In</a>
+      <a href="/signup" class="btn btn-primary btn-sm btn-inline" style="text-decoration:none;">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<main id="main-content">
+  <header class="public-page-hero">
+    <p class="eyebrow">Product features</p>
+    <h1>A complete Google review QR code workflow</h1>
+    <p>From the first scan to Google Business Profile, revQR removes unnecessary steps while keeping every review grounded in the customer’s own experience.</p>
+    <a href="/signup" class="btn btn-primary btn-inline public-hero-cta">Create your branded QR code</a>
+  </header>
+
+  <section class="landing-section feature-detail-grid" aria-label="revQR features">
+    <article class="feature-detail-card">
+      <p class="eyebrow">01 · QR design</p>
+      <h2>Branded QR codes that are ready to display</h2>
+      <p>Add your business name, logo, colors, and an optional table, counter, staff, or location tag. Download the QR code alone or export the entire high-resolution standee design.</p>
+    </article>
+    <article class="feature-detail-card">
+      <p class="eyebrow">02 · Customer input</p>
+      <h2>Multiple highlights and notes shape the draft</h2>
+      <p>Customers choose more than one relevant highlight and can add their own details. Those inputs guide the draft, making it more specific than a generic review template.</p>
+    </article>
+    <article class="feature-detail-card">
+      <p class="eyebrow">03 · AI assistance</p>
+      <h2>Editable review drafts that match the rating</h2>
+      <p>The assistant uses the selected rating, tags, notes, and business context to draft natural wording. Customers can edit or regenerate before choosing what to copy.</p>
+    </article>
+    <article class="feature-detail-card">
+      <p class="eyebrow">04 · Google destination</p>
+      <h2>Direct handoff to the connected review section</h2>
+      <p>After copying their draft, customers continue to the review section of the Google Business Profile link configured by the business owner.</p>
+    </article>
+    <article class="feature-detail-card">
+      <p class="eyebrow">05 · Analytics</p>
+      <h2>Understand scans, ratings, and source performance</h2>
+      <p>See scan volume, completed review drafts, rating distribution, and source-tag performance so you know which placements receive engagement.</p>
+    </article>
+    <article class="feature-detail-card">
+      <p class="eyebrow">06 · Service recovery</p>
+      <h2>Give every customer a private feedback option</h2>
+      <p>Customers can send a private note to the business instead of publishing it. Every rating follows the same transparent flow—revQR does not hide the Google option based on sentiment.</p>
+    </article>
+  </section>
+
+  <section class="landing-section audience-section">
+    <div>
+      <p class="eyebrow">Designed for real locations</p>
+      <h2>Useful wherever customers finish an in-person experience</h2>
+    </div>
+    <ul class="audience-list">
+      <li>Restaurants and cafés</li>
+      <li>Salons and wellness studios</li>
+      <li>Clinics and local practices</li>
+      <li>Hotels and guest stays</li>
+      <li>Retail stores and showrooms</li>
+      <li>Home and professional services</li>
+    </ul>
+  </section>
+
+  <section class="landing-cta">
+    <h2>Start collecting more detailed customer feedback</h2>
+    <p>Set up your business profile, customize the QR design, and download it in minutes.</p>
+    <a href="/pricing" class="btn btn-secondary btn-inline">View pricing</a>
+    <a href="/signup" class="btn btn-primary btn-inline">Get started</a>
+  </section>
+</main>
+
+<footer class="landing-footer">
+  <nav class="landing-footer-links" aria-label="Footer">
+    <a href="/">Home</a><a href="/features">Features</a><a href="/pricing">Pricing</a><a href="/signup">Get started</a><a href="/login">Log in</a>
+  </nav>
+  <p>© {{ current_year }} revQR · Google review QR tools for Indian local businesses</p>
+</footer>
+{% endblock %}

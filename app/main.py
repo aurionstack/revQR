@@ -2,15 +2,22 @@ import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
+from app.services.seo import (
+    homepage_structured_data,
+    public_page_structured_data,
+    site_url,
+    sitemap_xml,
+)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -89,6 +96,20 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
     """Block cross-origin state changes and apply baseline browser protections."""
+    if settings.ENVIRONMENT.lower() == "production":
+        canonical = urlparse(settings.APP_URL)
+        canonical_host = canonical.hostname
+        request_host = request.headers.get("host", "").split(":", 1)[0].lower()
+        forwarded_proto = request.headers.get("x-forwarded-proto", request.url.scheme).split(",", 1)[0].strip()
+        if canonical_host and request.method in {"GET", "HEAD"} and (
+            forwarded_proto != "https" or request_host != canonical_host
+        ):
+            query = f"?{request.url.query}" if request.url.query else ""
+            return RedirectResponse(
+                url=f"https://{canonical_host}{request.url.path}{query}",
+                status_code=status.HTTP_308_PERMANENT_REDIRECT,
+            )
+
     if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path != "/billing/webhook":
         source = request.headers.get("origin") or request.headers.get("referer")
         if source:
@@ -105,6 +126,13 @@ async def security_middleware(request: Request, call_next):
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("Content-Language", "en-IN")
+    public_indexable_paths = {"/", "/features", "/pricing", "/robots.txt", "/sitemap.xml"}
+    if request.url.path in public_indexable_paths:
+        response.headers.setdefault("Cache-Control", "public, max-age=300, stale-while-revalidate=86400")
+    elif not request.url.path.startswith("/static/"):
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive")
+        response.headers.setdefault("Cache-Control", "no-store")
     if settings.cookie_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return response
@@ -137,7 +165,64 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
 
 @app.get("/", response_class=HTMLResponse, tags=["public"])
 async def root(request: Request):
-    return templates.TemplateResponse(request, "landing/index.html")
+    return templates.TemplateResponse(request, "landing/index.html", {
+        "site_url": site_url(settings.APP_URL),
+        "current_year": datetime.now(timezone.utc).year,
+        "structured_data": homepage_structured_data(settings.APP_URL),
+    })
+
+
+@app.get("/features", response_class=HTMLResponse, tags=["public"])
+async def features(request: Request):
+    title = "Google Review QR Code Features for Local Businesses | revQR"
+    description = (
+        "Branded QR codes, relevant AI-assisted drafts, source tracking, analytics, "
+        "private feedback, and downloadable standees."
+    )
+    return templates.TemplateResponse(request, "landing/features.html", {
+        "site_url": site_url(settings.APP_URL),
+        "current_year": datetime.now(timezone.utc).year,
+        "structured_data": public_page_structured_data(
+            settings.APP_URL, path="/features", name=title, description=description
+        ),
+    })
+
+
+@app.get("/pricing", response_class=HTMLResponse, tags=["public"])
+async def pricing(request: Request):
+    title = "revQR Pricing — Google Review QR Codes from ₹999/year"
+    description = (
+        "Choose one year for ₹999 or two years for ₹1,599, with unlimited scans, "
+        "AI-assisted drafts, analytics, and QR downloads."
+    )
+    return templates.TemplateResponse(request, "landing/pricing.html", {
+        "site_url": site_url(settings.APP_URL),
+        "current_year": datetime.now(timezone.utc).year,
+        "structured_data": public_page_structured_data(
+            settings.APP_URL, path="/pricing", name=title, description=description
+        ),
+    })
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+async def robots_txt():
+    origin = site_url(settings.APP_URL)
+    body = "\n".join([
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /admin",
+        "Disallow: /dashboard",
+        "Disallow: /billing",
+        "Disallow: /qr",
+        f"Sitemap: {origin}/sitemap.xml",
+        "",
+    ])
+    return PlainTextResponse(body)
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap():
+    return Response(sitemap_xml(settings.APP_URL), media_type="application/xml")
 
 @app.get("/health", tags=["system"])
 async def health_check():
