@@ -16,9 +16,12 @@
 
 
   <!-- Fonts -->
+  {% block font_assets %}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" /></noscript>
+  {% endblock %}
 
   <!-- Styles -->
   <link rel="stylesheet" href="/static/css/style.css?v=20260909-seo" />
@@ -44,11 +47,13 @@
   <!-- Toast notification -->
   <div class="toast" id="toast"></div>
 
+  {% block core_scripts %}
   <!-- HTMX -->
-  <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+  <script defer src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 
   <!-- App JS -->
-  <script src="/static/js/app.js?v=20260909-production"></script>
+  <script defer src="/static/js/app.js?v=20260909-production"></script>
+  {% endblock %}
 
   {% block scripts %}{% endblock %}
 </body>

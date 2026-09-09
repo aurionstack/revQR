@@ -12,8 +12,8 @@
   --paper-deep:  #E4DFCF;
   --page-bg:     #DCD6C4;
   --ink:         #211F1B;
-  --ink-soft:    #6E6656;
-  --ink-faint:   #A69C86;
+  --ink-soft:    #5F584B;
+  --ink-faint:   #655E50;
   --line:        #BFB69E;
 
   /* Accent — overridden per-business via Jinja2 style block */
@@ -23,7 +23,7 @@
 
   /* Semantic */
   --negative:    #8B3A3A;
-  --positive:    #4C6B4A;
+  --positive:    #456443;
   --warning:     #9C7A2E;
 
   /* Typography */
@@ -1422,6 +1422,8 @@ textarea::placeholder {
   transition: color .15s ease;
 }
 .landing-nav-links a:hover { color: var(--ink); }
+.landing-nav-links a.btn-primary,
+.landing-nav-links a.btn-primary:hover { color: var(--paper); }
 
 .landing-hero {
   padding: 120px 24px 80px;

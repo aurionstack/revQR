@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
@@ -91,6 +92,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 
 
 @app.middleware("http")
@@ -130,6 +132,8 @@ async def security_middleware(request: Request, call_next):
     public_indexable_paths = {"/", "/features", "/pricing", "/robots.txt", "/sitemap.xml"}
     if request.url.path in public_indexable_paths:
         response.headers.setdefault("Cache-Control", "public, max-age=300, stale-while-revalidate=86400")
+    elif request.url.path.startswith("/static/"):
+        response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
     elif not request.url.path.startswith("/static/"):
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive")
         response.headers.setdefault("Cache-Control", "no-store")

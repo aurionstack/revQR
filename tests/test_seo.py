@@ -89,6 +89,20 @@ def test_social_and_brand_images_have_production_dimensions():
         assert image.size == (512, 512)
 
 
+def test_marketing_page_avoids_unused_application_javascript(client):
+    response = client.get("/")
+
+    assert "unpkg.com/htmx" not in response.text
+    assert "/static/js/app.js" not in response.text
+
+
+def test_static_assets_receive_long_lived_cache_headers(client):
+    response = client.get("/static/og-revqr.png")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
+
+
 def test_production_request_redirects_to_https_canonical_domain(client, monkeypatch):
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
     monkeypatch.setattr(settings, "APP_URL", "https://revqr.tech")
