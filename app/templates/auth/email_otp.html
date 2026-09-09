@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% set is_recovery = mode == 'recovery' %}
+{% block title %}{{ 'Verify Recovery Code' if is_recovery else 'Verify Email' }} — revQR{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="stage">
+    <main class="ticket auth-ticket">
+      <div class="ticket-head">
+        <p class="eyebrow">{{ 'Account Recovery' if is_recovery else 'Email Verification' }}</p>
+        <h1 class="biz-name auth-brand">revQR</h1>
+        <p class="meta-line">ENTER THE 6-DIGIT SECURITY CODE</p>
+      </div>
+      <div class="perf"></div>
+      <div class="ticket-body">
+        {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+        {% if delivery_error %}
+        <div class="flash flash-error">We could not send the email. Please try again shortly or contact support.</div>
+        {% endif %}
+        {% if retry_after %}
+        <div class="flash">Please wait {{ retry_after }} seconds before requesting another code.</div>
+        {% endif %}
+
+        <div class="security-intro">
+          <div class="security-icon" aria-hidden="true">✉</div>
+          <p>We sent a one-time code to <strong>{{ masked_email }}</strong>. It expires in 10 minutes.</p>
+        </div>
+
+        <form method="POST" action="{{ '/recover/verify' if is_recovery else '/verify-email' }}">
+          <div class="form-group">
+            <label class="form-label" for="code">Verification code</label>
+            <input
+              class="form-input otp-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              id="code"
+              name="code"
+              placeholder="000000"
+              pattern="[0-9]{6}"
+              minlength="6"
+              maxlength="6"
+              required
+              autofocus
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">Verify and continue</button>
+        </form>
+
+        <form method="POST" action="{{ '/recover/resend' if is_recovery else '/verify-email/resend' }}" class="otp-resend-form">
+          <button type="submit" class="btn-ghost">Send a new code</button>
+        </form>
+        <div class="private-link-row">
+          <a href="{{ '/forgot-password' if is_recovery else '/login' }}" class="btn-ghost">← Start again</a>
+        </div>
+      </div>
+      <div class="perf"></div>
+      <div class="ticket-footer"><p class="meta-line">SECURE ACCOUNT ACCESS</p></div>
+    </main>
+    <div class="torn-bottom"></div>
+  </div>
+</div>
+{% endblock %}

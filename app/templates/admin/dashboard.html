@@ -136,21 +136,22 @@
 
           <!-- Payment Status -->
           <div style="flex:1; text-align:center;">
-            {% if biz.has_paid or biz.is_admin %}
+            {% if biz.has_active_subscription %}
             <span class="receipt-badge copied" style="display:inline-block; font-size:11px; padding:4px 10px;">
-              ✓ Paid / Unlocked
+              ✓ Active
             </span>
             {% else %}
             <span class="receipt-badge pending" style="display:inline-block; font-size:11px; padding:4px 10px; background:#fff3cd; color:#856404; border-color:#ffeeba;">
-              🔒 Unpaid
+              {{ 'Expired' if biz.has_paid else '🔒 Unpaid' }}
             </span>
             {% endif %}
 
-            <form method="POST" action="/admin/clients/{{ biz.id }}/toggle-paid" style="margin-top:6px;">
+            {% if not biz.is_admin %}<form method="POST" action="/admin/clients/{{ biz.id }}/toggle-paid" style="margin-top:6px;">
               <button type="submit" class="btn btn-secondary btn-sm btn-inline" style="font-size:10px; padding:3px 8px;">
-                {{ "Lock QR" if biz.has_paid else "✓ Mark Paid (Cash)" }}
+                {{ "Revoke access" if biz.has_active_subscription else "✓ Grant 1 year (cash)" }}
               </button>
             </form>
+            {% endif %}
           </div>
 
           <!-- Scans / Reviews -->
@@ -187,11 +188,12 @@
             </a>
 
             <!-- Impersonate / Open Dashboard -->
-            <form method="POST" action="/admin/clients/{{ biz.id }}/impersonate" style="display:inline;">
+            {% if not biz.is_admin %}<form method="POST" action="/admin/clients/{{ biz.id }}/impersonate" style="display:inline;">
               <button type="submit" class="btn btn-primary btn-sm btn-inline" style="font-size:11px;" title="Open and manage client dashboard">
                 ⚡ Login As
               </button>
             </form>
+            {% endif %}
 
             <!-- Edit -->
             <a
@@ -225,6 +227,36 @@
         </div>
       {% endif %}
     </div>
+
+    <section id="stand-orders" class="source-attribution" style="margin-top:28px;">
+      <div class="dash-header" style="margin-bottom:16px;">
+        <h2 class="dash-title" style="font-size:21px;">Physical stand orders</h2>
+        <p class="dash-subtitle">Paid orders and delivery details</p>
+      </div>
+      {% if stand_orders %}
+      <div class="admin-order-list">
+        {% for item in stand_orders %}
+        {% set order = item.payment %}
+        <article class="admin-order-card">
+          <div>
+            <strong>{{ item.business.name }}</strong>
+            <p class="meta-line">{{ order.quantity }} × stand · ₹{{ order.amount // 100 }} · {{ order.paid_at.strftime('%d %b %Y') if order.paid_at else '' }}</p>
+            <p class="admin-order-address">{{ order.shipping_name }} · {{ order.shipping_phone }}<br />{{ order.shipping_address }} · {{ order.shipping_postal_code }}</p>
+          </div>
+          <form method="POST" action="/admin/stand-orders/{{ order.id }}/status" class="admin-order-status">
+            <label class="form-label" for="status-{{ order.id }}">Status</label>
+            <select class="form-input" id="status-{{ order.id }}" name="fulfillment_status">
+              {% for value in ['paid', 'processing', 'shipped', 'delivered', 'cancelled'] %}
+              <option value="{{ value }}" {{ 'selected' if order.fulfillment_status == value else '' }}>{{ value | title }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-secondary btn-sm" type="submit">Update</button>
+          </form>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}<p class="hint">No physical stand orders yet.</p>{% endif %}
+    </section>
   </main>
 </div>
 {% endblock %}

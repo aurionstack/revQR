@@ -13,8 +13,9 @@ def auth_client(client, test_business):
 
 @pytest.mark.asyncio
 async def test_dashboard_unauthenticated(client):
-    response = client.get("/dashboard")
-    assert response.status_code == 401
+    response = client.get("/dashboard", follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["location"].startswith("/login")
 
 @pytest.mark.asyncio
 async def test_dashboard_authenticated(auth_client):
@@ -26,7 +27,7 @@ async def test_dashboard_authenticated(auth_client):
 async def test_qr_page_locked(auth_client):
     response = auth_client.get("/dashboard/qr")
     assert response.status_code == 200
-    assert "Unlock Your QR Code" in response.text or "One-time payment" in response.text
+    assert "Choose your plan" in response.text
     # Should not contain download links
     assert "/qr/download/png" not in response.text
 
@@ -39,4 +40,4 @@ async def test_qr_page_unlocked(auth_client, test_business, db_session):
     
     response = auth_client.get("/dashboard/qr")
     assert response.status_code == 200
-    assert "Download PNG" in response.text
+    assert "PNG" in response.text

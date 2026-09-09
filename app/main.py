@@ -1,11 +1,14 @@
 import os
+import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 
@@ -27,6 +30,11 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
+    if settings.ENVIRONMENT.lower() == "production":
+        if settings.JWT_SECRET_KEY == "change-me-in-production" or len(settings.JWT_SECRET_KEY) < 32:
+            raise RuntimeError("JWT_SECRET_KEY must be a unique value of at least 32 characters in production.")
+        if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+            logging.warning("SMTP is not fully configured; email verification and recovery cannot deliver codes.")
     # Startup — ensure database tables and seed default super admin
     try:
         from create_admin import create_or_update_admin
@@ -44,8 +52,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="revQR",
     description="AI-powered Google review generator for SMBs",
-    version="0.1.0",
+    version="1.0.0",
     lifespan=lifespan,
+    docs_url=None if settings.ENVIRONMENT.lower() == "production" else "/docs",
+    redoc_url=None if settings.ENVIRONMENT.lower() == "production" else "/redoc",
 )
 
 
@@ -73,6 +83,31 @@ from fastapi import status
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    """Block cross-origin state changes and apply baseline browser protections."""
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path != "/billing/webhook":
+        source = request.headers.get("origin") or request.headers.get("referer")
+        if source:
+            source_parts = urlparse(source)
+            app_parts = urlparse(settings.APP_URL)
+            source_origin = f"{source_parts.scheme}://{source_parts.netloc}".lower()
+            expected_origin = f"{app_parts.scheme}://{app_parts.netloc}".lower()
+            request_origin = f"{request.url.scheme}://{request.url.netloc}".lower()
+            if source_origin not in {expected_origin, request_origin}:
+                return JSONResponse(status_code=403, content={"detail": "Cross-origin request blocked"})
+
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if settings.cookie_secure:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
 
 @app.exception_handler(FastAPIHTTPException)
 @app.exception_handler(StarletteHTTPException)
@@ -106,7 +141,7 @@ async def root(request: Request):
 
 @app.get("/health", tags=["system"])
 async def health_check():
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": "1.0.0"}
 
 
 # ── Routers (will be added as we build each phase) ───────────────────────
@@ -130,7 +165,9 @@ app.include_router(qr.router)
 from app.routers import billing
 app.include_router(billing.router)
 
+from app.routers import assets
+app.include_router(assets.router)
+
 # Super Admin Portal (Client creation, cash unlocks, account controls)
 from app.routers import admin
 app.include_router(admin.router)
-

@@ -82,10 +82,11 @@
           <div class="wa-input-group">
             <label class="wa-label">Initial Password</label>
             <input
-              type="text"
+              type="password"
               name="password"
               placeholder="e.g. Royal123!"
               class="wa-input"
+              minlength="10"
             />
           </div>
         </div>
@@ -137,19 +138,14 @@
             <span>✓ Mark as Paid (Cash / Offline Payment Collected)</span>
           </label>
           <p class="hint" style="margin-top:6px; margin-left:32px;">
-            Checking this immediately unlocks the client's QR code, high-res downloads, and standee generator without them having to pay through Razorpay.
+            Checking this grants one year of access after an offline payment. The client must verify their email on first login.
           </p>
-
-          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-size:13px; color:var(--ink-soft); margin-top:14px;">
-            <input type="checkbox" name="is_admin" value="true" style="width:16px; height:16px; cursor:pointer;" />
-            <span>Grant Super Admin Privileges to this account</span>
-          </label>
         </div>
 
         <!-- Submit -->
         <div style="display:flex; gap:12px; align-items:center;">
           <button type="submit" class="btn btn-primary" style="padding:14px 32px;">
-            Create &amp; Unlock Account
+            Create Client Account
           </button>
           <a href="/admin" class="btn btn-secondary" style="text-decoration:none;">Cancel</a>
         </div>

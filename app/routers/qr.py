@@ -1,3 +1,6 @@
+import re
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -40,21 +43,22 @@ async def get_qr_image(
             raise HTTPException(status_code=404, detail="Business not found.")
 
     # Check paywall (admin always bypasses)
-    if not business.is_admin and not target_business.has_paid:
+    if not target_business.has_active_subscription:
         raise HTTPException(status_code=402, detail="Payment required to unlock QR code.")
 
     # Generate the target URL for the QR code
     app_url = str(request.base_url).rstrip("/")
     target_url = f"{app_url}/review/{target_business.slug}"
-    if source.strip():
-        target_url += f"?source={source.strip()}"
+    clean_source = re.sub(r"[^a-zA-Z0-9_-]", "_", source.strip())[:40].strip("_")
+    if clean_source:
+        target_url += "?" + urlencode({"source": clean_source})
 
     # Determine QR color (default to solid black for maximum scannability and contrast)
-    fill_color = color.strip() if color.strip() else "#000000"
+    fill_color = color.strip() if re.fullmatch(r"#[0-9A-Fa-f]{6}", color.strip()) else "#000000"
 
 
     # Bottom label text (shows business name and custom source/table below the QR)
-    source_label = f" · {source.strip().replace('_', ' ').upper()}" if source.strip() else ""
+    source_label = f" · {clean_source.replace('_', ' ').upper()}" if clean_source else ""
     label_text = f"{target_business.name.upper()}{source_label}"
 
     # Generate QR Code bytes
@@ -70,7 +74,7 @@ async def get_qr_image(
 
     headers = {}
     if download == 1:
-        source_suffix = f"_{source.strip()}" if source.strip() else ""
+        source_suffix = f"_{clean_source}" if clean_source else ""
         headers["Content-Disposition"] = f'attachment; filename="qr_{target_business.slug}{source_suffix}.{ext}"'
 
     return Response(content=qr_bytes, media_type=media_type, headers=headers)

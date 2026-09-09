@@ -75,8 +75,12 @@ async def test_review_generate(mock_generate_review, client, test_business, test
 async def test_review_rate_limit(client, test_business, test_scan):
     # Rate limit is set to "5/minute" in config for the generate endpoint.
     # We will hit it 6 times to trigger 429
-    with patch("app.routers.review.generate_review") as mock_generate:
-        mock_generate.return_value = "Mock text"
+    with patch("app.routers.review.generate_review_variations") as mock_generate:
+        mock_generate.return_value = {
+            "punchy": "Mock short review.",
+            "detailed": "Mock detailed review.",
+            "warm": "Mock warm review.",
+        }
         
         for i in range(6):
             response = client.post(
@@ -94,3 +98,33 @@ async def test_review_rate_limit(client, test_business, test_scan):
                 assert response.status_code == 200
             else:
                 assert response.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_copy_and_redirect_tracking(client, test_business, test_scan, db_session: AsyncSession):
+    review = Review(
+        business_id=test_business.id,
+        scan_id=test_scan.id,
+        rating=5,
+        customer_notes="Friendly staff",
+        generated_text="Friendly team and quick service.",
+    )
+    db_session.add(review)
+    await db_session.commit()
+    await db_session.refresh(review)
+
+    copied = client.post(
+        f"/review/{test_business.slug}/copied",
+        json={"review_id": str(review.id), "final_text": "Friendly team and very quick service."},
+    )
+    redirected = client.post(
+        f"/review/{test_business.slug}/redirected",
+        json={"review_id": str(review.id)},
+    )
+    assert copied.status_code == 200
+    assert redirected.status_code == 200
+
+    await db_session.refresh(review)
+    assert review.copied is True
+    assert review.redirected is True
+    assert review.final_text == "Friendly team and very quick service."

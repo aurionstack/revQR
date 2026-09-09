@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="{% block meta_description %}revQR — AI-powered Google review generator for SMBs{% endblock %}" />
   <title>{% block title %}revQR{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
 
 
   <!-- Fonts -->
@@ -13,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- Styles -->
-  <link rel="stylesheet" href="/static/css/style.css?v=20260831-manual-reply" />
+  <link rel="stylesheet" href="/static/css/style.css?v=20260909-production" />
 
   <!-- Brand color override (injected by Jinja2 when business data is available) -->
   {% if brand_color is defined and brand_color %}
@@ -39,7 +40,7 @@
   <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 
   <!-- App JS -->
-  <script src="/static/js/app.js?v=20260831-manual-reply"></script>
+  <script src="/static/js/app.js?v=20260909-production"></script>
 
   {% block scripts %}{% endblock %}
 </body>

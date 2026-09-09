@@ -19,6 +19,15 @@
   <div class="flash flash-error" style="margin-bottom:24px;">{{ error }}</div>
   {% endif %}
 
+  {% if setup_required and not business.is_2fa_enabled %}
+  <div class="flash flash-error" style="margin-bottom:24px;">Super administrators must enable authenticator-based 2FA before opening the admin portal.</div>
+  {% endif %}
+
+  <div class="security-status-row">
+    <span class="security-status-dot {{ 'is-on' if business.email_verified else '' }}"></span>
+    <div><strong>Email verification</strong><div class="meta-line">{{ business.email }} · {{ 'Verified' if business.email_verified else 'Not verified' }}</div></div>
+  </div>
+
   {% if business.is_2fa_enabled %}
   
     <div style="padding:24px; background:var(--paper-deep); border-radius:12px; border:1px solid var(--line);">
@@ -31,11 +40,23 @@
       </div>
       <p class="hint">You will be required to enter a 6-digit code from your authenticator app every time you log in.</p>
       
+      {% if not business.is_admin %}
       <form method="POST" action="/dashboard/settings/security/disable" style="margin-top:24px;">
+        <div class="form-group">
+          <label class="form-label" for="disable_password">Current password</label>
+          <input class="form-input" id="disable_password" name="password" type="password" required autocomplete="current-password" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="disable_totp_code">Current 6-digit code</label>
+          <input class="form-input otp-input" id="disable_totp_code" name="totp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" />
+        </div>
         <button type="submit" class="btn btn-secondary" onclick="return confirm('Are you sure you want to disable Two-Factor Authentication? Your account will be less secure.');">
           Disable 2FA
         </button>
       </form>
+      {% else %}
+      <p class="hint" style="margin-top:20px;">2FA is mandatory for super administrator accounts and cannot be disabled here.</p>
+      {% endif %}
     </div>
     
   {% else %}
@@ -49,8 +70,7 @@
       </div>
       
       <div style="margin:24px 0; text-align:center;">
-        <!-- Generate QR code using public API -->
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ provisioning_uri | urlencode }}" alt="2FA QR Code" style="border-radius:8px; border:1px solid var(--line); padding:8px; background:white;" />
+        <img src="/dashboard/settings/security/qr" alt="2FA QR Code" width="200" height="200" style="border-radius:8px; border:1px solid var(--line); padding:8px; background:white;" />
       </div>
       
       <div class="hint" style="margin-bottom:24px;">
@@ -69,7 +89,7 @@
             required
             maxlength="6"
             pattern="\d{6}"
-            autocomplete="off"
+            autocomplete="one-time-code"
           />
         </div>
         <div class="continue-row">

@@ -403,7 +403,7 @@
       options = {
         key: "rzp_test_...",
         order_id: "order_...",
-        amount: 149900,
+        amount: 99900,
         currency: "INR",
         name: "revQR",
         description: "QR Code Generation",
@@ -466,30 +466,50 @@
     rzp.open();
   };
 
-  window.startPayment = function () {
-    var payBtn = document.getElementById("payBtn");
+  function createCheckout(payload, payBtn) {
     if (payBtn) {
       payBtn.disabled = true;
-      payBtn.textContent = "PROCESSING...";
+      payBtn.dataset.originalText = payBtn.textContent;
+      payBtn.textContent = "Processing…";
     }
 
     fetch("/dashboard/qr/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (data.error) {
           showToast(data.error, "error");
-          if (payBtn) { payBtn.disabled = false; payBtn.textContent = "PAY & GENERATE QR"; }
+          if (payBtn) { payBtn.disabled = false; payBtn.textContent = payBtn.dataset.originalText || "Try again"; }
           return;
         }
         initRazorpayCheckout(data);
+        if (payBtn) { payBtn.disabled = false; payBtn.textContent = payBtn.dataset.originalText || "Continue"; }
       })
       .catch(function (err) {
         showToast("Something went wrong. Please try again.", "error");
-        if (payBtn) { payBtn.disabled = false; payBtn.textContent = "PAY & GENERATE QR"; }
+        if (payBtn) { payBtn.disabled = false; payBtn.textContent = payBtn.dataset.originalText || "Try again"; }
       });
+  }
+
+  window.startPayment = function (planCode, button) {
+    createCheckout({ purpose: "subscription", plan_code: planCode || "annual" }, button || null);
+  };
+
+  window.startStandPayment = function (event) {
+    event.preventDefault();
+    var form = document.getElementById("standOrderForm");
+    if (!form || !form.reportValidity()) return;
+    createCheckout({
+      purpose: "physical_stand",
+      quantity: Number(document.getElementById("standQuantity").value),
+      shipping_name: document.getElementById("shippingName").value,
+      shipping_phone: document.getElementById("shippingPhone").value,
+      shipping_address: document.getElementById("shippingAddress").value,
+      shipping_postal_code: document.getElementById("shippingPostalCode").value,
+    }, document.getElementById("standPayBtn"));
   };
 
 
@@ -581,6 +601,11 @@
 
     function showPreview(file) {
       if (!previewImg) return;
+      if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 2 * 1024 * 1024) {
+        showToast("Choose a PNG, JPEG, or WebP image up to 2 MB.", "error");
+        fileInput.value = "";
+        return;
+      }
       var reader = new FileReader();
       reader.onload = function (e) {
         previewImg.src = e.target.result;

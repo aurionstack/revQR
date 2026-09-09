@@ -40,7 +40,7 @@ def client():
                 await session.close()
                 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+    with TestClient(app, base_url="https://testserver") as test_client:
         yield test_client
     app.dependency_overrides.clear()
     
@@ -64,6 +64,7 @@ async def test_business(db_session: AsyncSession):
         email=f"test_{unique_id}@example.com",
         password_hash=get_password_hash("password123"),
         is_active=True,
+        email_verified=True,
     )
     db_session.add(biz)
     await db_session.commit()

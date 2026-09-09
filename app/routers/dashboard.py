@@ -1,20 +1,23 @@
-import os
 import uuid
-from datetime import datetime, timedelta
+import io
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 import pyotp
+import qrcode
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, desc
 
 from app.database import get_db
-from app.models import Business, Scan, Review, Feedback
-from app.services.auth import get_current_business
+from app.models import Business, BusinessAsset, Scan, Review, Feedback, Payment
+from app.services.auth import get_current_business, verify_password
+from app.services.assets import LogoValidationError, normalize_logo
+from app.services.plans import public_plans
 from app.config import settings
 from app.main import TEMPLATES_DIR
 from app.services.google_reviews import (
@@ -22,13 +25,10 @@ from app.services.google_reviews import (
     google_business_reviews_destination,
     normalize_google_review_link,
 )
+from app.services.rate_limit import limiter
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-
-# Ensure media directory exists
-MEDIA_DIR = "media"
-os.makedirs(MEDIA_DIR, exist_ok=True)
 
 @router.get("", response_class=HTMLResponse)
 async def dashboard_home(
@@ -72,7 +72,7 @@ async def dashboard_home(
     # Simple Python generation since doing group_by date in SQLite/PG varies
     chart_data = []
     chart_max = 0
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         # Count scans on this day
@@ -80,7 +80,7 @@ async def dashboard_home(
         chart_data.append({"label": day.strftime("%a"), "count": 0, "date": day})
 
     # Fetch last 7 days scans
-    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     recent_scans_res = await db.execute(
         select(Scan.scanned_at).filter(Scan.business_id == business.id, Scan.scanned_at >= seven_days_ago)
     )
@@ -173,6 +173,7 @@ async def dashboard_google_reviews(
 from app.services.ai import generate_review_reply
 
 @router.post("/reviews/ai-reply", response_class=HTMLResponse)
+@limiter.limit("10/minute")
 async def dashboard_ai_reply(
     request: Request,
     review_id: str = Form(...),
@@ -248,28 +249,39 @@ async def dashboard_standee(
 ):
     app_url = str(request.base_url).rstrip("/")
     review_link = f"{app_url}/review/{business.slug}"
-    home_display = request.url.netloc
 
     return templates.TemplateResponse(request, "dashboard/standee.html", {
         "business": business,
         "app_url": app_url,
         "review_link": review_link,
-        "home_display": home_display,
     })
 
 
 @router.get("/qr", response_class=HTMLResponse)
 async def dashboard_qr(
     request: Request,
-    business: Business = Depends(get_current_business)
+    business: Business = Depends(get_current_business),
+    db: AsyncSession = Depends(get_db),
 ):
     app_url = str(request.base_url).rstrip("/")
-    price_display = settings.QR_PRICE_PAISE // 100
+    orders_result = await db.execute(
+        select(Payment)
+        .where(
+            Payment.business_id == business.id,
+            Payment.purpose == "physical_stand",
+            Payment.status == "paid",
+        )
+        .order_by(desc(Payment.created_at))
+        .limit(5)
+    )
     
     return templates.TemplateResponse(request, "dashboard/qr.html", {
         "business": business,
         "app_url": app_url,
-        "price_display": price_display,
+        "plans": public_plans(),
+        "stand_price": settings.PHYSICAL_STAND_PRICE_PAISE // 100,
+        "stand_orders": orders_result.scalars().all(),
+        "payment_success": request.query_params.get("payment") == "success",
         "razorpay_key": settings.RAZORPAY_KEY_ID,
     })
 
@@ -296,15 +308,33 @@ async def dashboard_security(
         await db.commit()
         await db.refresh(business)
         
-    totp = pyotp.TOTP(business.totp_secret)
-    provisioning_uri = totp.provisioning_uri(name=business.email, issuer_name="revQR")
-    
     return templates.TemplateResponse(request, "dashboard/security.html", {
         "business": business,
-        "provisioning_uri": provisioning_uri,
+        "setup_required": request.query_params.get("required") == "1",
     })
 
+
+@router.get("/settings/security/qr")
+async def dashboard_security_qr(
+    business: Business = Depends(get_current_business),
+):
+    if not business.totp_secret or business.is_2fa_enabled:
+        raise HTTPException(status_code=404, detail="2FA setup QR is unavailable")
+    provisioning_uri = pyotp.TOTP(business.totp_secret).provisioning_uri(
+        name=business.email,
+        issuer_name="revQR",
+    )
+    image = qrcode.make(provisioning_uri)
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    return Response(
+        content=output.getvalue(),
+        media_type="image/png",
+        headers={"Cache-Control": "no-store, private", "Pragma": "no-cache"},
+    )
+
 @router.post("/settings/security/enable")
+@limiter.limit("10/minute")
 async def dashboard_security_enable(
     request: Request,
     totp_code: str = Form(...),
@@ -315,7 +345,7 @@ async def dashboard_security_enable(
         return RedirectResponse(url="/dashboard/settings/security", status_code=status.HTTP_302_FOUND)
         
     totp = pyotp.TOTP(business.totp_secret)
-    if totp.verify(totp_code):
+    if totp.verify(totp_code.strip(), valid_window=1):
         business.is_2fa_enabled = True
         db.add(business)
         await db.commit()
@@ -324,19 +354,33 @@ async def dashboard_security_enable(
             "success": "Two-Factor Authentication has been successfully enabled."
         })
     else:
-        provisioning_uri = totp.provisioning_uri(name=business.email, issuer_name="revQR")
         return templates.TemplateResponse(request, "dashboard/security.html", {
             "business": business,
-            "provisioning_uri": provisioning_uri,
             "error": "Invalid code. Please try again."
         })
 
 @router.post("/settings/security/disable")
+@limiter.limit("5/hour")
 async def dashboard_security_disable(
     request: Request,
+    password: str = Form(...),
+    totp_code: str = Form(...),
     business: Business = Depends(get_current_business),
     db: AsyncSession = Depends(get_db)
 ):
+    if business.is_admin:
+        return templates.TemplateResponse(request, "dashboard/security.html", {
+            "business": business,
+            "error": "Two-factor authentication is mandatory for super administrators.",
+        }, status_code=status.HTTP_403_FORBIDDEN)
+    totp = pyotp.TOTP(business.totp_secret or "")
+    if not verify_password(password, business.password_hash) or not totp.verify(
+        totp_code.strip(), valid_window=1
+    ):
+        return templates.TemplateResponse(request, "dashboard/security.html", {
+            "business": business,
+            "error": "Password or authentication code is incorrect.",
+        }, status_code=status.HTTP_400_BAD_REQUEST)
     business.is_2fa_enabled = False
     business.totp_secret = None
     db.add(business)
@@ -352,6 +396,7 @@ async def dashboard_settings_post(
     phone: str = Form(""),
     custom_prompt: str = Form(""),
     logo: UploadFile = File(None),
+    remove_logo: bool = Form(False),
     business: Business = Depends(get_current_business),
     db: AsyncSession = Depends(get_db)
 ):
@@ -369,20 +414,48 @@ async def dashboard_settings_post(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    business.name = name
+    name = name.strip()
+    if len(name) < 2:
+        return templates.TemplateResponse(request, "dashboard/settings.html", {
+            "business": business,
+            "flash_error": "Business name must contain at least 2 characters.",
+        }, status_code=status.HTTP_400_BAD_REQUEST)
+    if not __import__("re").fullmatch(r"#[0-9A-Fa-f]{6}", brand_color):
+        brand_color = "#6366f1"
+
+    business.name = name[:255]
     business.brand_color = brand_color
     business.google_place_id = review_link
-    business.phone = phone
-    business.custom_prompt = custom_prompt
+    business.phone = phone.strip()[:20] or None
+    business.custom_prompt = custom_prompt.strip()[:2000] or None
 
-    if logo and logo.filename:
-        # Save logo locally for now (in production, use S3)
-        ext = os.path.splitext(logo.filename)[1]
-        filename = f"logo_{business.id}_{uuid.uuid4().hex[:8]}{ext}"
-        filepath = os.path.join(MEDIA_DIR, filename)
-        with open(filepath, "wb") as f:
-            f.write(await logo.read())
-        business.logo_url = f"/media/{filename}"
+    asset_result = await db.execute(
+        select(BusinessAsset).where(
+            BusinessAsset.business_id == business.id,
+            BusinessAsset.kind == "logo",
+        )
+    )
+    asset = asset_result.scalar_one_or_none()
+    if remove_logo and asset:
+        await db.delete(asset)
+        business.logo_url = None
+    elif logo and logo.filename:
+        raw = await logo.read(settings.MAX_LOGO_BYTES + 1)
+        try:
+            data, content_type, digest = normalize_logo(raw)
+        except LogoValidationError as exc:
+            return templates.TemplateResponse(request, "dashboard/settings.html", {
+                "business": business,
+                "flash_error": str(exc),
+            }, status_code=status.HTTP_400_BAD_REQUEST)
+        if asset is None:
+            asset = BusinessAsset(business_id=business.id, kind="logo")
+        asset.data = data
+        asset.content_type = content_type
+        asset.size_bytes = len(data)
+        asset.sha256 = digest
+        db.add(asset)
+        business.logo_url = f"/assets/logos/{business.id}"
 
     db.add(business)
     await db.commit()

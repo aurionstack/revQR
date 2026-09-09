@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
+import hmac
+import secrets
+import uuid
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +27,20 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
+def validate_password_strength(password: str) -> str | None:
+    if len(password) < 10:
+        return "Password must be at least 10 characters."
+    if len(password) > 128:
+        return "Password must be 128 characters or fewer."
+    if not any(char.islower() for char in password):
+        return "Password must include a lowercase letter."
+    if not any(char.isupper() for char in password):
+        return "Password must include an uppercase letter."
+    if not any(char.isdigit() for char in password):
+        return "Password must include a number."
+    return None
+
+
 # ── JWT Tokens ────────────────────────────────────────────────────────────────
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -31,19 +49,23 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-    to_encode.update({"exp": expire})
+    now = datetime.now(timezone.utc)
+    to_encode.update({"exp": expire, "iat": now, "jti": uuid.uuid4().hex, "type": "access"})
     encoded_jwt = jwt.encode(
         to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
     )
     return encoded_jwt
 
-def create_password_reset_token(email: str, business_id: str) -> str:
+def create_password_reset_token(email: str, business_id: str, password_version: int = 0) -> str:
     """Create a 30-minute signed token specifically for password reset."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=30)
     payload = {
         "sub": str(business_id),
         "email": email.lower().strip(),
         "type": "password_reset",
+        "password_version": password_version,
+        "iat": datetime.now(timezone.utc),
+        "jti": uuid.uuid4().hex,
         "exp": expire
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
@@ -60,25 +82,137 @@ def verify_password_reset_token(token: str) -> Optional[dict]:
     except JWTError:
         return None
 
-def create_pre_auth_token(business_id: str) -> str:
+def create_pre_auth_token(business_id: str, next_url: str = "") -> str:
     """Create a short-lived token for the 2FA verification step."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=10)
     payload = {
         "sub": str(business_id),
         "type": "pre_auth",
+        "next": next_url if next_url.startswith("/") and not next_url.startswith("//") else "",
         "exp": expire
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-def verify_pre_auth_token(token: str) -> Optional[str]:
-    """Verify pre-auth token and return business_id if valid."""
+def verify_pre_auth_token(token: str) -> Optional[dict]:
+    """Verify pre-auth token and return its payload if valid."""
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         if payload.get("type") != "pre_auth":
             return None
-        return payload.get("sub")
+        return payload if payload.get("sub") else None
     except JWTError:
         return None
+
+
+def create_email_flow_token(business_id: str, purpose: str, next_url: str = "") -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    payload = {
+        "sub": str(business_id),
+        "type": "email_flow",
+        "purpose": purpose,
+        "next": next_url if next_url.startswith("/") and not next_url.startswith("//") else "",
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def verify_email_flow_token(token: str | None, purpose: str) -> Optional[dict]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") != "email_flow" or payload.get("purpose") != purpose:
+            return None
+        return payload if payload.get("sub") else None
+    except JWTError:
+        return None
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def _otp_digest(business_id: str, purpose: str, code: str) -> str:
+    message = f"{business_id}:{purpose}:{code}".encode("utf-8")
+    return hmac.new(settings.JWT_SECRET_KEY.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+
+def issue_email_otp(business: Business, purpose: str, force: bool = False) -> tuple[str | None, int]:
+    """Create a six-digit one-time code, respecting the resend cooldown."""
+    now = datetime.now(timezone.utc)
+    last_sent = _as_utc(business.email_otp_last_sent_at)
+    if not force and last_sent:
+        elapsed = int((now - last_sent).total_seconds())
+        if elapsed < settings.EMAIL_OTP_RESEND_SECONDS:
+            return None, settings.EMAIL_OTP_RESEND_SECONDS - elapsed
+
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    business.email_otp_hash = _otp_digest(str(business.id), purpose, code)
+    business.email_otp_purpose = purpose
+    business.email_otp_expires_at = now + timedelta(minutes=settings.EMAIL_OTP_EXPIRY_MINUTES)
+    business.email_otp_last_sent_at = now
+    business.email_otp_attempts = 0
+    return code, 0
+
+
+def verify_email_otp(business: Business, purpose: str, code: str) -> tuple[bool, str]:
+    now = datetime.now(timezone.utc)
+    expires_at = _as_utc(business.email_otp_expires_at)
+    if (
+        not business.email_otp_hash
+        or business.email_otp_purpose != purpose
+        or not expires_at
+        or expires_at <= now
+    ):
+        return False, "This code has expired. Request a new code."
+
+    if business.email_otp_attempts >= 5:
+        return False, "Too many attempts. Request a new code."
+
+    business.email_otp_attempts += 1
+    expected = _otp_digest(str(business.id), purpose, code.strip())
+    if not hmac.compare_digest(expected, business.email_otp_hash):
+        remaining = max(0, 5 - business.email_otp_attempts)
+        return False, f"Incorrect code. {remaining} attempt{'s' if remaining != 1 else ''} remaining."
+
+    clear_email_otp(business)
+    return True, ""
+
+
+def clear_email_otp(business: Business) -> None:
+    business.email_otp_hash = None
+    business.email_otp_purpose = None
+    business.email_otp_expires_at = None
+    business.email_otp_attempts = 0
+
+
+def set_access_cookie(response: Response, token: str, max_age_seconds: int | None = None) -> None:
+    max_age = max_age_seconds or settings.JWT_EXPIRATION_MINUTES * 60
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=settings.cookie_secure,
+        max_age=max_age,
+        expires=max_age,
+        samesite="lax",
+        path="/",
+    )
+
+
+def set_flow_cookie(response: Response, name: str, token: str, max_age: int = 900) -> None:
+    response.set_cookie(
+        key=name,
+        value=token,
+        httponly=True,
+        secure=settings.cookie_secure,
+        max_age=max_age,
+        expires=max_age,
+        samesite="lax",
+        path="/",
+    )
 
 
 
@@ -110,6 +244,11 @@ async def get_current_business(
         payload = jwt.decode(
             token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
+        if payload.get("type") != "access":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+            )
         business_id_str = payload.get("sub")
         if business_id_str is None:
             raise HTTPException(
@@ -125,7 +264,11 @@ async def get_current_business(
         )
 
     # Fetch business from database
-    result = await db.execute(select(Business).filter(Business.id == business_id_str))
+    try:
+        business_id = uuid.UUID(business_id_str)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+    result = await db.execute(select(Business).filter(Business.id == business_id))
     business = result.scalars().first()
 
     if business is None:
@@ -133,6 +276,12 @@ async def get_current_business(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if int(payload.get("password_version", 0)) != business.password_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please log in again.",
         )
 
     if not business.is_active:
@@ -167,5 +316,9 @@ async def get_current_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: Administrator privileges required.",
         )
+    if not business.email_verified or not business.is_2fa_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super admin requires verified email and two-factor authentication.",
+        )
     return business
-

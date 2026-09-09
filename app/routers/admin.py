@@ -1,18 +1,27 @@
 import re
 import uuid
 from typing import Optional, Annotated
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+from email_validator import EmailNotValidError, validate_email
 
 from fastapi import APIRouter, Depends, Form, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete, func, desc, or_
+from sqlalchemy import and_, delete, func, desc, or_
 
 from app.database import get_db
-from app.models import Business, Scan, Review, Feedback
-from app.services.auth import get_current_admin, get_password_hash, create_access_token
+from app.models import Business, Scan, Review, Feedback, Payment
+from app.services.auth import (
+    create_access_token,
+    get_current_admin,
+    get_password_hash,
+    set_access_cookie,
+    validate_password_strength,
+)
+from app.services.plans import add_months
 from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
 from app.config import settings
 from app.main import TEMPLATES_DIR
@@ -44,7 +53,14 @@ async def admin_dashboard(
     total_clients_res = await db.execute(select(func.count(Business.id)))
     total_clients = total_clients_res.scalar() or 0
 
-    paid_clients_res = await db.execute(select(func.count(Business.id)).filter(or_(Business.has_paid == True, Business.is_admin == True)))
+    now = datetime.now(timezone.utc)
+    paid_clients_res = await db.execute(select(func.count(Business.id)).filter(or_(
+        Business.is_admin == True,
+        and_(
+            Business.has_paid == True,
+            or_(Business.subscription_expires_at.is_(None), Business.subscription_expires_at > now),
+        ),
+    )))
     paid_clients = paid_clients_res.scalar() or 0
 
     total_scans_res = await db.execute(select(func.count(Scan.id)))
@@ -90,6 +106,17 @@ async def admin_dashboard(
         })
 
     app_url = str(request.base_url).rstrip("/")
+    stand_orders_result = await db.execute(
+        select(Payment, Business)
+        .join(Business, Business.id == Payment.business_id)
+        .where(Payment.purpose == "physical_stand", Payment.status == "paid")
+        .order_by(desc(Payment.paid_at))
+        .limit(20)
+    )
+    stand_orders = [
+        {"payment": payment, "business": owner}
+        for payment, owner in stand_orders_result.all()
+    ]
 
     return templates.TemplateResponse(request, "admin/dashboard.html", {
         "admin": admin,
@@ -100,6 +127,7 @@ async def admin_dashboard(
         "clients": client_data,
         "search_query": q or "",
         "app_url": app_url,
+        "stand_orders": stand_orders,
     })
 
 
@@ -126,7 +154,6 @@ async def create_client_post(
     google_place_id: Annotated[Optional[str], Form()] = None,
     brand_color: Annotated[str, Form()] = "#6366f1",
     has_paid: Annotated[Optional[bool], Form()] = False,
-    is_admin: Annotated[Optional[bool], Form()] = False,
     admin: Business = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -152,9 +179,12 @@ async def create_client_post(
         computed_slug = f"{computed_slug}-{uuid.uuid4().hex[:4]}"
 
     # Normalize email
-    email = email.strip().lower()
-    if not email:
-        email = f"{computed_slug}@client.qrreviews.app"
+    try:
+        email = validate_email(email.strip(), check_deliverability=False).normalized.lower()
+    except EmailNotValidError:
+        return templates.TemplateResponse(request, "admin/new_client.html", {
+            "admin": admin, "error": "Enter a valid client email address."
+        }, status_code=400)
 
     email_check = await db.execute(select(Business).filter(Business.email == email))
     if email_check.scalar_one_or_none():
@@ -165,6 +195,11 @@ async def create_client_post(
     # Password
     if not password or not password.strip():
         password = "Client" + uuid.uuid4().hex[:6] + "!"
+    password_error = validate_password_strength(password.strip())
+    if password_error:
+        return templates.TemplateResponse(request, "admin/new_client.html", {
+            "admin": admin, "error": password_error
+        }, status_code=400)
 
     password_hash = get_password_hash(password.strip())
 
@@ -185,8 +220,11 @@ async def create_client_post(
         google_place_id=review_link,
         brand_color=brand_color if brand_color else "#6366f1",
         has_paid=bool(has_paid),
-        is_admin=bool(is_admin),
-        is_active=True
+        is_admin=False,
+        is_active=True,
+        email_verified=False,
+        subscription_plan="annual" if has_paid else None,
+        subscription_expires_at=add_months(datetime.now(timezone.utc), 12) if has_paid else None,
     )
     db.add(new_biz)
     await db.commit()
@@ -206,8 +244,17 @@ async def toggle_paid_status(
     biz = res.scalar_one_or_none()
     if not biz:
         raise HTTPException(status_code=404, detail="Client not found")
+    if biz.is_admin:
+        raise HTTPException(status_code=400, detail="Admin entitlement cannot be changed here.")
 
-    biz.has_paid = not biz.has_paid
+    if biz.has_active_subscription:
+        biz.has_paid = False
+        biz.subscription_plan = None
+        biz.subscription_expires_at = None
+    else:
+        biz.has_paid = True
+        biz.subscription_plan = "annual"
+        biz.subscription_expires_at = add_months(datetime.now(timezone.utc), 12)
     db.add(biz)
     await db.commit()
     return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
@@ -224,6 +271,8 @@ async def toggle_active_status(
     biz = res.scalar_one_or_none()
     if not biz:
         raise HTTPException(status_code=404, detail="Client not found")
+    if biz.is_admin:
+        raise HTTPException(status_code=400, detail="Admin accounts cannot be suspended here.")
 
     biz.is_active = not biz.is_active
     db.add(biz)
@@ -247,15 +296,19 @@ async def impersonate_client(
         raise HTTPException(status_code=404, detail="Client not found")
 
     # Issue JWT for client
-    token = create_access_token(data={"sub": str(biz.id), "email": biz.email})
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        max_age=60 * 60 * 24 * 7,
-        samesite="lax",
+    if biz.is_admin or not biz.is_active:
+        raise HTTPException(status_code=400, detail="This account cannot be impersonated.")
+    token = create_access_token(
+        data={
+            "sub": str(biz.id),
+            "email": biz.email,
+            "password_version": biz.password_version,
+            "impersonated_by": str(admin.id),
+        },
+        expires_delta=timedelta(minutes=30),
     )
+    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    set_access_cookie(response, token, max_age_seconds=30 * 60)
     return response
 
 
@@ -274,13 +327,11 @@ async def view_client_standee(
 
     app_url = str(request.base_url).rstrip("/")
     review_link = f"{app_url}/review/{biz.slug}"
-    home_display = request.url.netloc
 
     return templates.TemplateResponse(request, "dashboard/standee.html", {
         "business": biz,
         "app_url": app_url,
         "review_link": review_link,
-        "home_display": home_display,
         "admin_view": True
     })
 
@@ -317,7 +368,6 @@ async def edit_client_post(
     brand_color: Annotated[str, Form()] = "#6366f1",
     new_password: Annotated[Optional[str], Form()] = None,
     has_paid: Annotated[Optional[bool], Form()] = False,
-    is_admin: Annotated[Optional[bool], Form()] = False,
     admin: Business = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db)
 ):
@@ -335,17 +385,54 @@ async def edit_client_post(
         }, status_code=400)
 
     # Update basic fields
-    biz.name = name.strip()
-    biz.slug = slugify(slug)
-    biz.email = email.strip().lower()
+    updated_name = name.strip()
+    updated_slug = slugify(slug)
+    if len(updated_name) < 2 or not updated_slug:
+        return templates.TemplateResponse(request, "admin/edit_client.html", {
+            "admin": admin, "client": biz, "error": "Business name and URL slug are required."
+        }, status_code=400)
+    try:
+        updated_email = validate_email(email.strip(), check_deliverability=False).normalized.lower()
+    except EmailNotValidError:
+        return templates.TemplateResponse(request, "admin/edit_client.html", {
+            "admin": admin, "client": biz, "error": "Enter a valid client email address."
+        }, status_code=400)
+    conflict = await db.execute(select(Business).where(
+        ((Business.email == updated_email) | (Business.slug == updated_slug)),
+        Business.id != biz.id,
+    ))
+    if conflict.scalar_one_or_none():
+        return templates.TemplateResponse(request, "admin/edit_client.html", {
+            "admin": admin, "client": biz, "error": "That email address or review URL is already in use."
+        }, status_code=400)
+    old_email = biz.email
+    biz.name = updated_name[:255]
+    biz.slug = updated_slug
+    biz.email = updated_email
     biz.phone = phone.strip() if phone else None
     biz.google_place_id = review_link
     biz.brand_color = brand_color if brand_color else "#6366f1"
-    biz.has_paid = bool(has_paid)
-    biz.is_admin = bool(is_admin)
+    if not biz.is_admin:
+        was_paid = biz.has_paid
+        biz.has_paid = bool(has_paid)
+        if biz.has_paid and not was_paid:
+            biz.subscription_plan = "annual"
+            biz.subscription_expires_at = add_months(datetime.now(timezone.utc), 12)
+        elif not biz.has_paid:
+            biz.subscription_plan = None
+            biz.subscription_expires_at = None
+    if old_email != updated_email:
+        biz.email_verified = False
+        biz.password_version += 1
 
     if new_password and new_password.strip():
+        password_error = validate_password_strength(new_password.strip())
+        if password_error:
+            return templates.TemplateResponse(request, "admin/edit_client.html", {
+                "admin": admin, "client": biz, "error": password_error
+            }, status_code=400)
         biz.password_hash = get_password_hash(new_password.strip())
+        biz.password_version += 1
 
     db.add(biz)
     await db.commit()
@@ -376,3 +463,27 @@ async def delete_client(
     await db.commit()
 
     return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
+
+
+@router.post("/stand-orders/{order_id}/status")
+async def update_stand_order_status(
+    order_id: uuid.UUID,
+    fulfillment_status: Annotated[str, Form()],
+    admin: Business = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    allowed = {"paid", "processing", "shipped", "delivered", "cancelled"}
+    if fulfillment_status not in allowed:
+        raise HTTPException(status_code=400, detail="Invalid fulfillment status")
+    result = await db.execute(select(Payment).where(
+        Payment.id == order_id,
+        Payment.purpose == "physical_stand",
+        Payment.status == "paid",
+    ))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Stand order not found")
+    order.fulfillment_status = fulfillment_status
+    db.add(order)
+    await db.commit()
+    return RedirectResponse(url="/admin#stand-orders", status_code=status.HTTP_302_FOUND)

@@ -9,7 +9,7 @@ async def test_signup(client, db_session):
         data={
             "name": "New Business",
             "email": "new@example.com",
-            "password": "strongpassword123",
+            "password": "Strongpassword123",
             "google_place_id": review_link,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -17,6 +17,8 @@ async def test_signup(client, db_session):
     )
     # The endpoint should return a 302 Redirect (FastAPI returns 302 for RedirectResponse if status_code=302)
     assert response.status_code in (302, 303)
+    assert response.headers["location"].startswith("/verify-email")
+    assert "access_token" not in response.cookies
 
     from app.models import Business
     from sqlalchemy.future import select
@@ -32,7 +34,7 @@ async def test_signup(client, db_session):
         data={
             "name": "New Business",
             "email": "new@example.com",
-            "password": "strongpassword123",
+            "password": "Strongpassword123",
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         follow_redirects=False

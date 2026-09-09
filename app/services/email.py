@@ -4,23 +4,27 @@ import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import asyncio
+from html import escape
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
+def email_delivery_configured() -> bool:
+    return bool(
+        settings.SMTP_HOST
+        and settings.SMTP_USER
+        and settings.SMTP_PASSWORD
+        and settings.SMTP_FROM_EMAIL
+    )
+
+
 def _send_smtp_sync(to_email: str, subject: str, html_content: str, text_content: str):
     """Synchronous SMTP email sending function to run in a thread pool."""
-    if not settings.SMTP_HOST or not settings.SMTP_USER:
-        # SMTP not configured — log securely to server console
-        print(f"\n{'='*70}")
-        print(f"[SECURE EMAIL SERVICE] (SMTP not configured in .env)")
-        print(f"To: {to_email}")
-        print(f"Subject: {subject}")
-        print(f"Content:\n{text_content}")
-        print(f"{'='*70}\n")
-        return True
+    if not email_delivery_configured():
+        logger.error("Email delivery is not configured; message was not sent")
+        return False
 
     try:
         msg = MIMEMultipart("alternative")
@@ -45,11 +49,61 @@ def _send_smtp_sync(to_email: str, subject: str, html_content: str, text_content
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
                 server.sendmail(settings.SMTP_FROM_EMAIL, to_email, msg.as_string())
 
-        logger.info(f"Password reset email sent to {to_email}")
+        logger.info("Security email sent")
         return True
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.exception("Failed to send security email")
         return False
+
+
+async def _send_email(to_email: str, subject: str, html_content: str, text_content: str) -> bool:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None,
+        _send_smtp_sync,
+        to_email,
+        subject,
+        html_content,
+        text_content,
+    )
+
+
+async def send_security_code_email(
+    to_email: str,
+    code: str,
+    business_name: str,
+    purpose: str,
+) -> bool:
+    safe_name = escape(business_name or "there")
+    if purpose == "password_reset":
+        subject = "Your revQR password recovery code"
+        heading = "Password recovery"
+        intro = "Use this one-time code to continue resetting your password."
+    else:
+        subject = "Verify your revQR email"
+        heading = "Verify your email"
+        intro = "Use this one-time code to verify your email address and continue."
+
+    text_content = (
+        f"Hi {business_name or 'there'},\n\n{intro}\n\n"
+        f"Your verification code is: {code}\n\n"
+        f"It expires in {settings.EMAIL_OTP_EXPIRY_MINUTES} minutes. "
+        "If you did not request this, you can ignore this email.\n\nrevQR"
+    )
+    html_content = f"""
+    <!doctype html>
+    <html><body style="margin:0;padding:24px;background:#f3f0e6;color:#1f1e1a;font-family:Arial,sans-serif;">
+      <div style="max-width:480px;margin:auto;background:#fff;border:1px solid #ddd6c6;border-radius:16px;padding:32px;">
+        <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#6b665a;">revQR Security</div>
+        <h1 style="font-size:24px;margin:14px 0;">{heading}</h1>
+        <p>Hi {safe_name},</p>
+        <p style="line-height:1.6;">{intro}</p>
+        <div style="font-family:monospace;font-size:34px;font-weight:700;letter-spacing:.2em;text-align:center;background:#f3f0e6;border-radius:12px;padding:18px;margin:24px 0;">{code}</div>
+        <p style="font-size:13px;line-height:1.5;color:#6b665a;">This code expires in {settings.EMAIL_OTP_EXPIRY_MINUTES} minutes and can only be used once. Never share it with anyone.</p>
+      </div>
+    </body></html>
+    """
+    return await _send_email(to_email, subject, html_content, text_content)
 
 
 async def send_password_reset_email(to_email: str, reset_url: str, business_name: str = "there") -> bool:
@@ -101,6 +155,4 @@ The revQR Team
     """
 
 
-    # Run sending in background threadpool
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _send_smtp_sync, to_email, subject, html_content, text_content)
+    return await _send_email(to_email, subject, html_content, text_content)

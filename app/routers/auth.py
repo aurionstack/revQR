@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
+from email_validator import EmailNotValidError, validate_email
 
 from app.database import get_db
 from app.models import Business
@@ -18,11 +19,19 @@ from app.services.auth import (
     get_current_business_optional,
     create_pre_auth_token,
     verify_pre_auth_token,
+    create_email_flow_token,
+    verify_email_flow_token,
+    issue_email_otp,
+    verify_email_otp,
+    validate_password_strength,
+    set_access_cookie,
 )
 import pyotp
 from app.config import settings
 from app.main import TEMPLATES_DIR
 from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
+from app.services.email import send_security_code_email
+from app.services.rate_limit import limiter
 
 router = APIRouter(tags=["auth"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -34,6 +43,69 @@ def generate_slug(name: str) -> str:
     # Add a short unique identifier
     short_id = str(uuid.uuid4())[:6]
     return f"{slug}-{short_id}"
+
+
+def normalize_email(value: str) -> str | None:
+    try:
+        return validate_email(value.strip(), check_deliverability=False).normalized.lower()
+    except EmailNotValidError:
+        return None
+
+
+def safe_next_url(value: str | None) -> str:
+    candidate = (value or "").strip()
+    return candidate if candidate.startswith("/") and not candidate.startswith("//") else ""
+
+
+def auth_destination(business: Business, next_url: str = "") -> str:
+    if business.is_admin and not business.is_2fa_enabled:
+        return "/dashboard/settings/security?required=1"
+    return safe_next_url(next_url) or ("/admin" if business.is_admin else "/dashboard")
+
+
+def authenticated_response(business: Business, destination: str) -> RedirectResponse:
+    expiry_minutes = 12 * 60 if business.is_admin else settings.JWT_EXPIRATION_MINUTES
+    token = create_access_token(
+        data={"sub": str(business.id), "password_version": business.password_version},
+        expires_delta=timedelta(minutes=expiry_minutes),
+    )
+    response = RedirectResponse(destination, status_code=status.HTTP_302_FOUND)
+    set_access_cookie(response, token, expiry_minutes * 60)
+    return response
+
+
+async def begin_email_flow(
+    business: Business,
+    purpose: str,
+    db: AsyncSession,
+    next_url: str = "",
+    force: bool = False,
+) -> tuple[RedirectResponse, bool, int]:
+    code, retry_after = issue_email_otp(business, purpose, force=force)
+    sent = False
+    if code:
+        db.add(business)
+        await db.commit()
+        sent = await send_security_code_email(
+            business.email,
+            code,
+            business.name,
+            purpose,
+        )
+
+    route = "/verify-email" if purpose == "email_verification" else "/recover/verify"
+    response = RedirectResponse(route, status_code=status.HTTP_302_FOUND)
+    cookie_name = "email_verify_token" if purpose == "email_verification" else "recovery_flow_token"
+    response.set_cookie(
+        cookie_name,
+        create_email_flow_token(str(business.id), purpose, safe_next_url(next_url)),
+        httponly=True,
+        secure=settings.cookie_secure,
+        max_age=15 * 60,
+        samesite="lax",
+        path="/",
+    )
+    return response, sent, retry_after
 
 # ── Signup ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +121,7 @@ async def signup_page(
     return templates.TemplateResponse(request, "auth/signup.html")
 
 @router.post("/signup", response_class=HTMLResponse)
+@limiter.limit("5/hour")
 async def signup(
     request: Request,
     name: str = Form(...),
@@ -65,17 +138,33 @@ async def signup(
         "phone": phone,
     }
 
-    # Validation
-    if len(password) < 8:
+    name = name.strip()
+    if len(name) < 2 or len(name) > 255:
         return templates.TemplateResponse(
             request,
             "auth/signup.html",
-            {"error": "Password must be at least 8 characters.", "form_data": form_data},
+            {"error": "Business name must contain 2 to 255 characters.", "form_data": form_data},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    password_error = validate_password_strength(password)
+    if password_error:
+        return templates.TemplateResponse(
+            request,
+            "auth/signup.html",
+            {"error": password_error, "form_data": form_data},
             status_code=status.HTTP_400_BAD_REQUEST
         )
     
     # Check if email exists
-    email_clean = email.strip().lower()
+    email_clean = normalize_email(email)
+    if not email_clean:
+        return templates.TemplateResponse(
+            request,
+            "auth/signup.html",
+            {"error": "Enter a valid email address.", "form_data": form_data},
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
     result = await db.execute(select(Business).filter(Business.email == email_clean))
     if result.scalars().first():
         return templates.TemplateResponse(
@@ -97,7 +186,6 @@ async def signup(
 
     # Create business
     slug = generate_slug(name)
-    is_admin_user = (email_clean == "aurionstack@gmail.com")
     new_business = Business(
         name=name,
         email=email_clean,
@@ -106,9 +194,10 @@ async def signup(
         # Keep the existing column name for database compatibility. It now stores
         # the direct Google review link (legacy Place IDs are still supported).
         google_place_id=review_link,
-        phone=phone or None,
-        is_admin=is_admin_user,
-        has_paid=is_admin_user,
+        phone=phone.strip() or None,
+        is_admin=False,
+        has_paid=False,
+        email_verified=False,
     )
     
     db.add(new_business)
@@ -124,22 +213,14 @@ async def signup(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     
-    # Generate token & set cookie
-    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(new_business.id)}, expires_delta=access_token_expires
+    response, sent, _ = await begin_email_flow(
+        new_business,
+        "email_verification",
+        db,
+        force=True,
     )
-    
-    redirect_target = "/admin" if new_business.is_admin else "/dashboard"
-    response = RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        max_age=settings.JWT_EXPIRATION_MINUTES * 60,
-        expires=settings.JWT_EXPIRATION_MINUTES * 60,
-        samesite="lax",
-    )
+    if not sent:
+        response.headers["Location"] = "/verify-email?delivery=failed"
     return response
 
 # ── Login ─────────────────────────────────────────────────────────────────────
@@ -156,6 +237,7 @@ async def login_page(
     return templates.TemplateResponse(request, "auth/login.html")
 
 @router.post("/login", response_class=HTMLResponse)
+@limiter.limit("10/minute")
 async def login(
     request: Request,
     email: str = Form(...),
@@ -163,11 +245,11 @@ async def login(
     next: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
-    email_clean = email.strip().lower()
+    email_clean = normalize_email(email) or email.strip().lower()
     result = await db.execute(select(Business).filter(Business.email == email_clean))
     business = result.scalars().first()
     
-    if not business or not verify_password(password, business.password_hash):
+    if not business or not business.is_active or not verify_password(password, business.password_hash):
         return templates.TemplateResponse(
             request,
             "auth/login.html",
@@ -175,45 +257,133 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED
         )
     
+    next_url = safe_next_url(next or request.query_params.get("next"))
+
+    if not business.email_verified:
+        response, sent, _ = await begin_email_flow(
+            business,
+            "email_verification",
+            db,
+            next_url=next_url,
+        )
+        if not sent and not business.email_otp_hash:
+            response.headers["Location"] = "/verify-email?delivery=failed"
+        return response
+
     if business.is_2fa_enabled:
         # Generate pre-auth token and redirect to 2FA page
-        pre_auth_token = create_pre_auth_token(str(business.id))
+        pre_auth_token = create_pre_auth_token(str(business.id), next_url)
         response = RedirectResponse(url="/login/2fa", status_code=status.HTTP_302_FOUND)
         response.set_cookie(
             key="pre_auth_token",
             value=pre_auth_token,
             httponly=True,
+            secure=settings.cookie_secure,
             max_age=600,  # 10 minutes
             samesite="lax",
         )
         return response
     
-    # Generate token & set cookie
-    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(business.id)}, expires_delta=access_token_expires
-    )
-    
-    next_url = next or request.query_params.get("next")
-    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
-        redirect_target = next_url
-    elif business.is_admin:
-        redirect_target = "/admin"
-    else:
-        redirect_target = "/dashboard"
-        
-    response = RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        max_age=settings.JWT_EXPIRATION_MINUTES * 60,
-        expires=settings.JWT_EXPIRATION_MINUTES * 60,
-        samesite="lax",
-    )
-    return response
+    return authenticated_response(business, auth_destination(business, next_url))
 
 # ── 2FA ───────────────────────────────────────────────────────────────────────
+
+def masked_email(value: str) -> str:
+    local, _, domain = value.partition("@")
+    visible = local[:2] if len(local) > 2 else local[:1]
+    return f"{visible}{'*' * max(2, len(local) - len(visible))}@{domain}"
+
+
+async def email_flow_business(
+    request: Request,
+    purpose: str,
+    db: AsyncSession,
+) -> tuple[dict, Business] | None:
+    cookie_name = "email_verify_token" if purpose == "email_verification" else "recovery_flow_token"
+    payload = verify_email_flow_token(request.cookies.get(cookie_name), purpose)
+    if not payload:
+        return None
+    try:
+        business_id = uuid.UUID(payload["sub"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    result = await db.execute(select(Business).filter(Business.id == business_id))
+    business = result.scalar_one_or_none()
+    return (payload, business) if business and business.is_active else None
+
+
+@router.get("/verify-email", response_class=HTMLResponse)
+async def verify_email_page(
+    request: Request,
+    delivery: str = "",
+    wait: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    flow = await email_flow_business(request, "email_verification", db)
+    if not flow:
+        return RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
+    _, business = flow
+    if business.email_verified:
+        return RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
+    return templates.TemplateResponse(request, "auth/email_otp.html", {
+        "mode": "verify",
+        "masked_email": masked_email(business.email),
+        "delivery_error": delivery == "failed",
+        "retry_after": max(0, wait),
+    })
+
+
+@router.post("/verify-email", response_class=HTMLResponse)
+@limiter.limit("10/minute")
+async def verify_email_post(
+    request: Request,
+    code: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    flow = await email_flow_business(request, "email_verification", db)
+    if not flow:
+        return RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
+    payload, business = flow
+    verified, error = verify_email_otp(business, "email_verification", code.strip())
+    if not verified:
+        db.add(business)
+        await db.commit()
+        return templates.TemplateResponse(request, "auth/email_otp.html", {
+            "mode": "verify",
+            "masked_email": masked_email(business.email),
+            "error": error,
+        }, status_code=status.HTTP_400_BAD_REQUEST)
+
+    business.email_verified = True
+    db.add(business)
+    await db.commit()
+    destination = auth_destination(business, payload.get("next", ""))
+    response = authenticated_response(business, destination)
+    response.delete_cookie("email_verify_token", path="/")
+    return response
+
+
+@router.post("/verify-email/resend")
+@limiter.limit("3/5minutes")
+async def verify_email_resend(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    flow = await email_flow_business(request, "email_verification", db)
+    if not flow:
+        return RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
+    payload, business = flow
+    response, sent, retry_after = await begin_email_flow(
+        business,
+        "email_verification",
+        db,
+        next_url=payload.get("next", ""),
+    )
+    if retry_after:
+        response.headers["Location"] = f"/verify-email?wait={retry_after}"
+    elif not sent:
+        response.headers["Location"] = "/verify-email?delivery=failed"
+    return response
 
 @router.get("/login/2fa", response_class=HTMLResponse)
 async def login_2fa_page(request: Request):
@@ -223,13 +393,15 @@ async def login_2fa_page(request: Request):
     return templates.TemplateResponse(request, "auth/login_2fa.html")
 
 @router.post("/login/2fa", response_class=HTMLResponse)
+@limiter.limit("10/minute")
 async def login_2fa(
     request: Request,
     totp_code: str = Form(...),
     db: AsyncSession = Depends(get_db)
 ):
     pre_auth_token = request.cookies.get("pre_auth_token")
-    business_id_str = verify_pre_auth_token(pre_auth_token) if pre_auth_token else None
+    payload = verify_pre_auth_token(pre_auth_token) if pre_auth_token else None
+    business_id_str = payload.get("sub") if payload else None
     
     if not business_id_str:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
@@ -237,12 +409,12 @@ async def login_2fa(
     result = await db.execute(select(Business).filter(Business.id == uuid.UUID(business_id_str)))
     business = result.scalars().first()
     
-    if not business or not business.totp_secret:
+    if not business or not business.is_active or not business.email_verified or not business.totp_secret:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
         
     # Verify TOTP code
     totp = pyotp.TOTP(business.totp_secret)
-    if not totp.verify(totp_code):
+    if not totp.verify(totp_code.strip(), valid_window=1):
         return templates.TemplateResponse(
             request,
             "auth/login_2fa.html",
@@ -250,22 +422,8 @@ async def login_2fa(
             status_code=status.HTTP_400_BAD_REQUEST
         )
         
-    # Generate real token & set cookie
-    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(business.id)}, expires_delta=access_token_expires
-    )
-    
-    redirect_target = "/admin" if business.is_admin else "/dashboard"
-    response = RedirectResponse(url=redirect_target, status_code=status.HTTP_302_FOUND)
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        max_age=settings.JWT_EXPIRATION_MINUTES * 60,
-        expires=settings.JWT_EXPIRATION_MINUTES * 60,
-        samesite="lax",
-    )
+    redirect_target = auth_destination(business, payload.get("next", ""))
+    response = authenticated_response(business, redirect_target)
     # Clean up pre-auth cookie
     response.delete_cookie("pre_auth_token")
     return response
@@ -275,7 +433,8 @@ async def login_2fa(
 @router.get("/logout")
 async def logout():
     response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
-    response.delete_cookie("access_token")
+    for cookie_name in ("access_token", "pre_auth_token", "email_verify_token", "recovery_flow_token"):
+        response.delete_cookie(cookie_name, path="/")
     return response
 
 
@@ -293,30 +452,109 @@ async def forgot_password_page(
     return templates.TemplateResponse(request, "auth/forgot_password.html")
 
 
-from app.services.email import send_password_reset_email
-
 @router.post("/forgot-password", response_class=HTMLResponse)
+@limiter.limit("5/hour")
 async def forgot_password_post(
     request: Request,
     email: str = Form(...),
     db: AsyncSession = Depends(get_db)
 ):
-    email_clean = email.strip().lower()
+    email_clean = normalize_email(email) or email.strip().lower()
     result = await db.execute(select(Business).filter(Business.email == email_clean))
     business = result.scalars().first()
 
     if business and business.is_active:
-        token = create_password_reset_token(business.email, str(business.id))
-        app_url = str(request.base_url).rstrip("/")
-        reset_url = f"{app_url}/reset-password?token={token}"
-        # Send password reset email directly and privately to their inbox
-        await send_password_reset_email(business.email, reset_url, business.name)
+        response, sent, _ = await begin_email_flow(
+            business,
+            "password_reset",
+            db,
+            force=True,
+        )
+        if not sent:
+            response.headers["Location"] = "/recover/verify?delivery=failed"
+        return response
 
-    # Always return a safe generic message without exposing the token or whether the user exists
-    return templates.TemplateResponse(request, "auth/forgot_password.html", {
-        "submitted": True,
-        "email": email_clean,
+    # The same destination is shown for unknown accounts to avoid immediate
+    # account discovery through the recovery endpoint.
+    return RedirectResponse("/recover/verify", status_code=status.HTTP_302_FOUND)
+
+
+@router.get("/recover/verify", response_class=HTMLResponse)
+async def recovery_code_page(
+    request: Request,
+    delivery: str = "",
+    wait: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    flow = await email_flow_business(request, "password_reset", db)
+    masked = masked_email(flow[1].email) if flow else "your account email"
+    return templates.TemplateResponse(request, "auth/email_otp.html", {
+        "mode": "recovery",
+        "masked_email": masked,
+        "delivery_error": delivery == "failed",
+        "retry_after": max(0, wait),
     })
+
+
+@router.post("/recover/verify", response_class=HTMLResponse)
+@limiter.limit("10/minute")
+async def recovery_code_post(
+    request: Request,
+    code: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    flow = await email_flow_business(request, "password_reset", db)
+    if not flow:
+        return templates.TemplateResponse(request, "auth/email_otp.html", {
+            "mode": "recovery",
+            "masked_email": "your account email",
+            "error": "The code is invalid or the recovery session expired. Start again.",
+        }, status_code=status.HTTP_400_BAD_REQUEST)
+
+    _, business = flow
+    verified, error = verify_email_otp(business, "password_reset", code.strip())
+    db.add(business)
+    await db.commit()
+    if not verified:
+        return templates.TemplateResponse(request, "auth/email_otp.html", {
+            "mode": "recovery",
+            "masked_email": masked_email(business.email),
+            "error": error,
+        }, status_code=status.HTTP_400_BAD_REQUEST)
+
+    token = create_password_reset_token(
+        business.email,
+        str(business.id),
+        business.password_version,
+    )
+    response = RedirectResponse(
+        f"/reset-password?token={token}",
+        status_code=status.HTTP_302_FOUND,
+    )
+    response.delete_cookie("recovery_flow_token", path="/")
+    return response
+
+
+@router.post("/recover/resend")
+@limiter.limit("3/5minutes")
+async def recovery_code_resend(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    flow = await email_flow_business(request, "password_reset", db)
+    if not flow:
+        return RedirectResponse("/forgot-password", status_code=status.HTTP_302_FOUND)
+    _, business = flow
+    response, sent, retry_after = await begin_email_flow(
+        business,
+        "password_reset",
+        db,
+    )
+    if retry_after:
+        response.headers["Location"] = f"/recover/verify?wait={retry_after}"
+    elif not sent:
+        response.headers["Location"] = "/recover/verify?delivery=failed"
+    return response
 
 
 
@@ -332,13 +570,25 @@ async def reset_password_page(
             "invalid_token": True
         })
 
+    try:
+        business_id = uuid.UUID(payload.get("sub", ""))
+    except (TypeError, ValueError):
+        business_id = None
+    result = await db.execute(select(Business).filter(Business.id == business_id)) if business_id else None
+    business = result.scalar_one_or_none() if result else None
+    if not business or business.password_version != payload.get("password_version", 0):
+        return templates.TemplateResponse(request, "auth/reset_password.html", {
+            "invalid_token": True
+        })
+
     return templates.TemplateResponse(request, "auth/reset_password.html", {
         "token": token,
-        "email": payload.get("email")
+        "email": business.email,
     })
 
 
 @router.post("/reset-password", response_class=HTMLResponse)
+@limiter.limit("10/hour")
 async def reset_password_post(
     request: Request,
     token: str = Form(...),
@@ -352,11 +602,12 @@ async def reset_password_post(
             "invalid_token": True
         })
 
-    if len(password) < 8:
+    password_error = validate_password_strength(password)
+    if password_error:
         return templates.TemplateResponse(request, "auth/reset_password.html", {
             "token": token,
             "email": payload.get("email"),
-            "error": "Password must be at least 8 characters."
+            "error": password_error,
         })
 
     if password != confirm_password:
@@ -376,7 +627,13 @@ async def reset_password_post(
             "invalid_token": True
         })
 
-    business.password_hash = get_password_hash(password.strip())
+    if business.password_version != payload.get("password_version", 0):
+        return templates.TemplateResponse(request, "auth/reset_password.html", {
+            "invalid_token": True
+        })
+
+    business.password_hash = get_password_hash(password)
+    business.password_version += 1
     db.add(business)
     await db.commit()
 

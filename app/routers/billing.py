@@ -2,6 +2,8 @@
 Billing router — handles Razorpay payment flow for QR code generation.
 """
 
+import json
+
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,27 +23,50 @@ async def create_order(
 ):
     """
     Create a Razorpay order for QR code generation.
-    Only called for non-admin, non-paid businesses.
+    Prices and quantities are always validated on the server.
     """
-    if business.is_admin or business.has_paid:
-        return JSONResponse({"error": "QR already unlocked"}, status_code=400)
+    try:
+        payload = await request.json()
+    except (json.JSONDecodeError, ValueError):
+        payload = {}
+
+    purpose = str(payload.get("purpose", "subscription"))
+    plan_code = str(payload.get("plan_code", "annual"))
+    try:
+        quantity = int(payload.get("quantity", 1))
+    except (TypeError, ValueError):
+        quantity = 0
+
+    if purpose == "physical_stand" and not business.has_active_subscription:
+        return JSONResponse({"error": "An active subscription is required before ordering stands."}, status_code=403)
 
     try:
-        order = await razorpay_service.create_order(business.id, db)
+        order = await razorpay_service.create_order(
+            business.id,
+            db,
+            purpose=purpose,
+            plan_code=plan_code,
+            quantity=quantity,
+            shipping=payload,
+        )
         return JSONResponse({
             "order_id": order["order_id"],
             "amount": order["amount"],
             "currency": order["currency"],
             "key": order["key"],
             "name": "revQR",
-            "description": f"QR Code for {business.name}",
+            "description": order["description"],
 
             "business_name": business.name,
             "email": business.email,
             "slug": business.slug,
         })
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    except razorpay_service.PaymentConfigurationError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503)
+    except Exception:
+        return JSONResponse({"error": "Payment order could not be created. Please try again."}, status_code=502)
 
 
 @router.post("/dashboard/qr/verify-payment")
@@ -62,13 +87,16 @@ async def verify_payment(
         raise HTTPException(status_code=400, detail="Missing payment details")
 
     verified = await razorpay_service.verify_payment(
-        razorpay_order_id, razorpay_payment_id, razorpay_signature, db
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        db,
+        business_id=business.id,
     )
 
     if verified:
         # Also mark the business object in this request as paid so it's fresh if needed
-        business.has_paid = True
-        return RedirectResponse("/dashboard/qr", status_code=303)
+        return RedirectResponse("/dashboard/qr?payment=success", status_code=303)
     else:
         raise HTTPException(status_code=400, detail="Payment verification failed")
 
@@ -83,7 +111,7 @@ async def razorpay_webhook(
     Razorpay signs webhooks with X-Razorpay-Signature header.
     """
     signature = request.headers.get("X-Razorpay-Signature", "")
-    body = await request.json()
+    body = await request.body()
 
     success = await razorpay_service.handle_webhook(body, signature, db)
 

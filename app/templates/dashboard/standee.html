@@ -9,7 +9,7 @@
   <p class="dash-subtitle">Download a branded review standee for your counter, tables, or entrance</p>
 </div>
 
-{% if business.is_admin or business.has_paid %}
+{% if business.has_active_subscription %}
 <!-- Standee Preview & Download -->
 <div class="standee-layout">
   <!-- Live Preview -->
@@ -56,8 +56,8 @@
         <span style="font-size:11px; opacity:0.7;">No app needed · Takes 30 seconds</span>
       </div>
 
-      <!-- revQR home -->
-      <div class="standee-url">{{ home_display }}</div>
+      <!-- Product brand (no long deployment URL on the printed artwork) -->
+      <div class="standee-url">revQR</div>
 
       <!-- Google badge -->
       <div class="standee-badge">
@@ -124,7 +124,7 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 (function() {
-  var baseSlug = "{{ business.slug }}";
+  var baseSlug = {{ business.slug | tojson }};
 
   window.updateStandeeHeadline = function() {
     var input = document.getElementById('standeeHeadlineInput');

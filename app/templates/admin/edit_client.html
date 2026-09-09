@@ -43,10 +43,11 @@
         <div class="wa-input-group" style="margin-bottom:20px;">
           <label class="wa-label">Business Name *</label>
           <input
-            type="text"
+            type="password"
             name="name"
             value="{{ client.name }}"
             class="wa-input"
+            minlength="10"
             required
           />
         </div>
@@ -134,10 +135,7 @@
             <span>✓ Mark as Paid (Unlocked QR Code &amp; Downloads)</span>
           </label>
 
-          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; font-size:13px; color:var(--ink-soft); margin-top:14px;">
-            <input type="checkbox" name="is_admin" value="true" {{ 'checked' if client.is_admin else '' }} style="width:16px; height:16px; cursor:pointer;" />
-            <span>Super Admin Privileges</span>
-          </label>
+          <p class="hint" style="margin-top:8px;">Offline access is granted for one year. Administrator roles cannot be assigned from this form.</p>
         </div>
 
         <!-- Submit -->

@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from urllib.parse import urlparse
 
 
 class Settings(BaseSettings):
@@ -28,6 +29,22 @@ class Settings(BaseSettings):
 
     # App
     APP_URL: str = "http://localhost:8000"
+    ENVIRONMENT: str = "development"
+    ALLOWED_HOSTS: str = ""
+    MAX_LOGO_BYTES: int = 2 * 1024 * 1024
+
+    @property
+    def cookie_secure(self) -> bool:
+        return self.APP_URL.lower().startswith("https://")
+
+    @property
+    def allowed_hosts(self) -> list[str]:
+        configured = [host.strip() for host in self.ALLOWED_HOSTS.split(",") if host.strip()]
+        app_host = urlparse(self.APP_URL).hostname
+        defaults = ["localhost", "127.0.0.1", "testserver"]
+        if app_host:
+            defaults.append(app_host)
+        return list(dict.fromkeys(configured + defaults))
 
     # Initial super-admin seed. Leave ADMIN_PASSWORD empty after the account
     # exists so application restarts never reset its password.
@@ -39,18 +56,24 @@ class Settings(BaseSettings):
     # Razorpay Payment
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
-    QR_PRICE_PAISE: int = 149900  # ₹1499
+    RAZORPAY_WEBHOOK_SECRET: str = ""
+    ANNUAL_PRICE_PAISE: int = 99900
+    TWO_YEAR_PRICE_PAISE: int = 159900
+    PHYSICAL_STAND_PRICE_PAISE: int = 24900
 
     # Rate Limiting (AI endpoint)
     AI_RATE_LIMIT: str = "5/minute"  # per scan/IP
 
-    # Email / SMTP Settings (Optional - for sending real password reset emails)
+    # Email / SMTP Settings
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = "noreply@qrreviews.app"
     SMTP_TLS: bool = True
+
+    EMAIL_OTP_EXPIRY_MINUTES: int = 10
+    EMAIL_OTP_RESEND_SECONDS: int = 60
 
     model_config = {
         "env_file": ".env",

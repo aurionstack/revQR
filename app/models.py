@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Boolean, Integer, Text, ForeignKey, DateTime, func
+from sqlalchemy import String, Boolean, Integer, Text, ForeignKey, DateTime, LargeBinary, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -33,6 +33,15 @@ class Business(Base):
     has_paid: Mapped[bool] = mapped_column(Boolean, default=False)  # unlocks QR generation
     totp_secret: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_otp_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    email_otp_purpose: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    email_otp_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_otp_last_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_otp_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    password_version: Mapped[int] = mapped_column(Integer, default=0)
+    subscription_plan: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    subscription_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     custom_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     scraped_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -44,17 +53,35 @@ class Business(Base):
     # SQLAlchemy from trying to set their non-nullable business_id to NULL when
     # a business is removed.
     scans: Mapped[list["Scan"]] = relationship(
-        back_populates="business", lazy="selectin", passive_deletes="all"
+        back_populates="business", lazy="noload", passive_deletes="all"
     )
     reviews: Mapped[list["Review"]] = relationship(
-        back_populates="business", lazy="selectin", passive_deletes="all"
+        back_populates="business", lazy="noload", passive_deletes="all"
     )
     feedback_items: Mapped[list["Feedback"]] = relationship(
-        back_populates="business", lazy="selectin", passive_deletes="all"
+        back_populates="business", lazy="noload", passive_deletes="all"
     )
     payments: Mapped[list["Payment"]] = relationship(
-        back_populates="business", lazy="selectin", passive_deletes="all"
+        back_populates="business", lazy="noload", passive_deletes="all"
     )
+    assets: Mapped[list["BusinessAsset"]] = relationship(
+        back_populates="business", lazy="noload", passive_deletes="all"
+    )
+
+    @property
+    def has_active_subscription(self) -> bool:
+        """Return whether paid features are currently available."""
+        if self.is_admin:
+            return True
+        if not self.has_paid:
+            return False
+        # Existing lifetime purchases remain grandfathered.
+        if self.subscription_expires_at is None:
+            return True
+        expires_at = self.subscription_expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return expires_at > datetime.now(timezone.utc)
 
     def __repr__(self) -> str:
         return f"<Business {self.name} ({self.slug})>"
@@ -172,6 +199,14 @@ class Payment(Base):
     razorpay_signature: Mapped[str | None] = mapped_column(String(500), nullable=True)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)  # in paise
     currency: Mapped[str] = mapped_column(String(3), default="INR")
+    purpose: Mapped[str] = mapped_column(String(32), default="subscription")
+    plan_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    shipping_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    shipping_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    shipping_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    shipping_postal_code: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    fulfillment_status: Mapped[str | None] = mapped_column(String(24), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="created")  # created | paid | failed
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -185,3 +220,32 @@ class Payment(Base):
 
     def __repr__(self) -> str:
         return f"<Payment {self.razorpay_order_id} ({self.status}) for {self.business_id}>"
+
+
+class BusinessAsset(Base):
+    """Durable business assets stored in PostgreSQL instead of ephemeral disk."""
+    __tablename__ = "business_assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    business_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("businesses.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    kind: Mapped[str] = mapped_column(String(24), default="logo")
+    content_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    business: Mapped["Business"] = relationship(back_populates="assets")

@@ -10,6 +10,7 @@
 </div>
 
 <div style="max-width:520px;">
+  {% if flash_error %}<div class="security-alert error-alert" role="alert">{{ flash_error }}</div>{% endif %}
   <form method="POST" action="/dashboard/settings" enctype="multipart/form-data" id="settingsForm">
 
     <!-- Logo -->
@@ -28,6 +29,9 @@
         </p>
       </div>
       <input type="file" id="logoFile" name="logo" accept="image/png,image/jpeg,image/webp" style="display:none;" />
+      {% if business.logo_url %}
+      <label class="remove-logo-option"><input type="checkbox" name="remove_logo" value="true" /> Remove the current logo</label>
+      {% endif %}
     </div>
 
     <!-- Business Name -->
@@ -104,9 +108,10 @@
         id="customPrompt"
         name="custom_prompt"
         rows="3"
-        placeholder="e.g. Mention that we are a family-owned Italian restaurant."
+        maxlength="2000"
+        placeholder="e.g. We are a family-owned Italian restaurant known for wood-fired pizza and friendly service."
       >{{ business.custom_prompt or '' }}</textarea>
-      <p class="form-hint">These instructions are secretly given to the AI to help it write better reviews for your business.</p>
+      <p class="form-hint">Describe your business, services, tone, and details customers commonly mention. This context makes generated reviews more relevant.</p>
     </div>
 
     <div class="continue-row">

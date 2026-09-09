@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Business, Scan, Review, Feedback
 from app.services.rate_limit import limiter
-from app.services.ai import generate_review_variations, generate_review_reply
+from app.services.ai import generate_review_variations
 from app.services.google_reviews import GoogleReviewLinkError, google_review_destination
 from app.config import settings
 from app.main import TEMPLATES_DIR
@@ -27,7 +27,20 @@ def get_client_ip(request: Request) -> str:
         return request.client.host
     return "unknown"
 
+
+def parse_uuid(value: str, field: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(value)
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid {field}.") from exc
+
+
+def normalize_source(value: str) -> str | None:
+    clean = "_".join(value.strip().split())[:100]
+    return "".join(char for char in clean if char.isalnum() or char in "_-") or None
+
 @router.get("/{business_slug}", response_class=HTMLResponse)
+@limiter.limit("60/minute")
 async def review_landing(request: Request, business_slug: str, source: str = "", db: AsyncSession = Depends(get_db)):
     """
     Entry point when customer scans the QR code.
@@ -54,7 +67,7 @@ async def review_landing(request: Request, business_slug: str, source: str = "",
         business_id=business.id,
         ip_hash=ip_hash,
         user_agent=user_agent,
-        source=source[:100] if source else None,
+        source=normalize_source(source),
     )
     db.add(new_scan)
     await db.commit()
@@ -68,6 +81,7 @@ async def review_landing(request: Request, business_slug: str, source: str = "",
     })
 
 @router.post("/{business_slug}/rate", response_class=HTMLResponse)
+@limiter.limit("30/minute")
 async def submit_rating(
     request: Request,
     business_slug: str,
@@ -86,6 +100,10 @@ async def submit_rating(
 
     if rating < 1 or rating > 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
+    scan_uuid = parse_uuid(scan_id, "scan session")
+    scan_result = await db.execute(select(Scan).where(Scan.id == scan_uuid, Scan.business_id == business.id))
+    if not scan_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="This review session is no longer valid.")
         
     chips = []
     if rating >= 4:
@@ -123,6 +141,11 @@ async def generate_review_text(
 
     if rating < 1 or rating > 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
+    scan_uuid = parse_uuid(scan_id, "scan session")
+    scan_result = await db.execute(select(Scan).where(Scan.id == scan_uuid, Scan.business_id == business.id))
+    scan = scan_result.scalar_one_or_none()
+    if not scan:
+        raise HTTPException(status_code=400, detail="This review session is no longer valid.")
 
     # Preserve every selected highlight separately. The UI allows multiple chips,
     # while these caps keep public AI requests predictable and inexpensive.
@@ -155,7 +178,7 @@ async def generate_review_text(
     primary_text = variations.get("detailed", variations.get("punchy", ""))
     new_review = Review(
         business_id=business.id,
-        scan_id=uuid.UUID(scan_id) if scan_id else None,
+        scan_id=scan_uuid,
         rating=rating,
         customer_notes=full_notes,
         generated_text=primary_text
@@ -184,6 +207,56 @@ async def generate_review_text(
         "business_name": business.name
     })
 
+
+async def _review_for_business(
+    db: AsyncSession,
+    business_slug: str,
+    review_id: str,
+) -> Review | None:
+    review_uuid = parse_uuid(review_id, "review")
+    result = await db.execute(
+        select(Review)
+        .join(Business, Business.id == Review.business_id)
+        .where(Review.id == review_uuid, Business.slug == business_slug)
+    )
+    return result.scalar_one_or_none()
+
+
+@router.post("/{business_slug}/copied")
+@limiter.limit("30/minute")
+async def mark_review_copied(
+    request: Request,
+    business_slug: str,
+    db: AsyncSession = Depends(get_db),
+):
+    payload = await request.json()
+    review = await _review_for_business(db, business_slug, str(payload.get("review_id", "")))
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    final_text = str(payload.get("final_text") or "").strip()
+    review.copied = True
+    review.final_text = final_text[:5000] or review.generated_text
+    db.add(review)
+    await db.commit()
+    return {"status": "ok"}
+
+
+@router.post("/{business_slug}/redirected")
+@limiter.limit("30/minute")
+async def mark_review_redirected(
+    request: Request,
+    business_slug: str,
+    db: AsyncSession = Depends(get_db),
+):
+    payload = await request.json()
+    review = await _review_for_business(db, business_slug, str(payload.get("review_id", "")))
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    review.redirected = True
+    db.add(review)
+    await db.commit()
+    return {"status": "ok"}
+
 @router.get("/{business_slug}/private-note-form", response_class=HTMLResponse)
 async def get_private_note_form(
     request: Request, 
@@ -193,23 +266,28 @@ async def get_private_note_form(
     rating: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Returns the form partial for a private note."""
-    return HTMLResponse(content=f'''
-        <div class="private-note-box fade-in">
-            <h3>Send a private message</h3>
-            <form hx-post="/review/{business_slug}/private-note" hx-target="#review-stage" hx-swap="innerHTML">
-                <input type="hidden" name="scan_id" value="{scan_id}" />
-                <input type="hidden" name="review_id" value="{review_id}" />
-                <input type="hidden" name="rating" value="{rating}" />
-                <textarea name="message" rows="3" placeholder="This goes directly to the business owner..." required></textarea>
-                <div class="action-row" style="margin-top:12px;">
-                    <button type="submit" class="btn btn-primary">Send Message</button>
-                </div>
-            </form>
-        </div>
-    ''')
+    """Returns the escaped form partial for a private note."""
+    business_result = await db.execute(select(Business).where(Business.slug == business_slug))
+    business = business_result.scalar_one_or_none()
+    scan_uuid = parse_uuid(scan_id, "scan session")
+    review_uuid = parse_uuid(review_id, "review")
+    related_result = await db.execute(select(Review).where(
+        Review.id == review_uuid,
+        Review.business_id == business.id if business else None,
+        Review.scan_id == scan_uuid,
+    ))
+    if not business or not related_result.scalar_one_or_none() or rating not in range(1, 6):
+        raise HTTPException(status_code=400, detail="This review session is no longer valid.")
+    return templates.TemplateResponse(request, "review/private_note_form.html", {
+        "slug": business.slug,
+        "business_name": business.name,
+        "scan_id": scan_id,
+        "review_id": review_id,
+        "rating": rating,
+    })
 
 @router.post("/{business_slug}/private-note", response_class=HTMLResponse)
+@limiter.limit("10/minute")
 async def submit_private_note(
     request: Request,
     business_slug: str,
@@ -225,12 +303,26 @@ async def submit_private_note(
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
         
+    if rating not in range(1, 6):
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
+    clean_message = message.strip()[:2000]
+    if not clean_message:
+        raise HTTPException(status_code=400, detail="Private note cannot be empty.")
+    scan_uuid = parse_uuid(scan_id, "scan session")
+    review_uuid = parse_uuid(review_id, "review")
+    relation_result = await db.execute(select(Review).where(
+        Review.id == review_uuid,
+        Review.business_id == business.id,
+        Review.scan_id == scan_uuid,
+    ))
+    if not relation_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="This review session is no longer valid.")
     new_feedback = Feedback(
         business_id=business.id,
-        scan_id=uuid.UUID(scan_id) if scan_id else None,
-        review_id=uuid.UUID(review_id) if review_id else None,
+        scan_id=scan_uuid,
+        review_id=review_uuid,
         rating=rating,
-        message=message
+        message=clean_message,
     )
     db.add(new_feedback)
     await db.commit()

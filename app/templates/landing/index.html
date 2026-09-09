@@ -125,23 +125,25 @@
 <!-- Pricing -->
 <section class="landing-section" id="pricing" style="text-align:center;">
   <p class="landing-section-title">Simple Pricing</p>
-  <div class="qr-display" style="max-width:400px; margin:0 auto;">
-    <p class="eyebrow">One-Time Payment</p>
-    <div class="paywall-price" style="margin:12px 0 4px;">
-      <span class="currency">₹</span>1499
-    </div>
-    <p class="paywall-label">Pay once, use forever</p>
-    <ul class="paywall-features">
-      <li>Branded QR code</li>
-      <li>Unlimited customer scans</li>
-      <li>AI-powered review drafting</li>
-      <li>Business dashboard &amp; analytics</li>
-      <li>PNG &amp; SVG download</li>
-    </ul>
-    <a href="/signup" class="btn btn-accent" style="max-width:280px; margin:0 auto; text-decoration:none;">
-      Get Started
-    </a>
+  <p style="color:var(--ink-soft); margin:-12px auto 24px; max-width:560px;">All plans include unlimited scans, AI review drafts, analytics, and downloadable branded QR artwork.</p>
+  <div class="plan-grid" style="max-width:760px; margin:0 auto; text-align:left;">
+    <article class="plan-card">
+      <p class="eyebrow">1 Year</p>
+      <div class="plan-price"><span>₹</span>999</div>
+      <p class="plan-period">₹83/month equivalent</p>
+      <p class="plan-saving">Perfect for getting started</p>
+      <a href="/signup" class="btn btn-primary" style="text-decoration:none; margin-top:18px;">Start annual plan</a>
+    </article>
+    <article class="plan-card featured">
+      <span class="plan-badge">Best value · save ₹399</span>
+      <p class="eyebrow">2 Years</p>
+      <div class="plan-price"><span>₹</span>1,599</div>
+      <p class="plan-period">₹67/month equivalent</p>
+      <p class="plan-saving">20% less than two annual plans</p>
+      <a href="/signup" class="btn btn-accent" style="text-decoration:none; margin-top:18px;">Get the best value</a>
+    </article>
   </div>
+  <p class="payment-note">Optional physical branded QR stands are ₹249 each, including delivery.</p>
 </section>
 
 <!-- CTA -->
@@ -158,4 +160,3 @@
   <p>© {{ current_year if current_year else '2026' }} revQR · Built for Indian SMBs</p>
 </footer>
 {% endblock %}
-
