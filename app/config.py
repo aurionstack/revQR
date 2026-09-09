@@ -41,7 +41,10 @@ class Settings(BaseSettings):
     def allowed_hosts(self) -> list[str]:
         configured = [host.strip() for host in self.ALLOWED_HOSTS.split(",") if host.strip()]
         app_host = urlparse(self.APP_URL).hostname
-        defaults = ["localhost", "127.0.0.1", "testserver"]
+        # Heroku assigns an immutable generated hostname to newer apps.  It can
+        # differ from APP_URL (for example when APP_URL is a custom domain), so
+        # trust Heroku-routed hostnames while still rejecting arbitrary hosts.
+        defaults = ["localhost", "127.0.0.1", "testserver", "*.herokuapp.com"]
         if app_host:
             defaults.append(app_host)
         return list(dict.fromkeys(configured + defaults))
