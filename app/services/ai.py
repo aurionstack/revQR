@@ -40,7 +40,9 @@ async def _generate_content_with_fallback(model, contents, config):
             continue
             
     logger.error(f"All Gemini API keys failed. Last error: {last_error}")
-    raise last_error
+    if last_error:
+        raise last_error
+    raise RuntimeError("No API keys available or all failed without raising an exception.")
 
 
 class ReviewVariationPayload(BaseModel):
