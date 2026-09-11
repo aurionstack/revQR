@@ -113,9 +113,9 @@
         {% endif %}
       </div>
       <div class="receipt-col-md">
-        <span class="receipt-time">{{ review.created_at.strftime('%b %d') }}</span>
-        <br />
-        <span class="receipt-time">{{ review.created_at.strftime('%I:%M %p') }}</span>
+        <span class="receipt-time">{{ review.created_at | local_time('%b %d') }}</span>
+        <br>
+        <span class="receipt-time">{{ review.created_at | local_time('%I:%M %p') }}</span>
       </div>
     </div>
     {% endfor %}
@@ -150,9 +150,9 @@
         <div class="receipt-text">{{ fb.message }}</div>
       </div>
       <div class="receipt-col-md">
-        <span class="receipt-time">{{ fb.created_at.strftime('%b %d') }}</span>
-        <br />
-        <span class="receipt-time">{{ fb.created_at.strftime('%I:%M %p') }}</span>
+        <span class="receipt-time">{{ fb.created_at | local_time('%b %d') }}</span>
+        <br>
+        <span class="receipt-time">{{ fb.created_at | local_time('%I:%M %p') }}</span>
       </div>
     </div>
     {% endfor %}

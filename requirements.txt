@@ -4,8 +4,9 @@ alembic
 asyncpg
 google-genai
 qrcode[pil]
-python-jose[cryptography]
+PyJWT[crypto]>=2.13.0,<3.0
 passlib
+argon2-cffi>=25.1.0,<26.0
 bcrypt==4.0.1
 python-multipart
 email-validator

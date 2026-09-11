@@ -127,7 +127,7 @@
     <div class="hint">
       <p><b>Email:</b> {{ business.email }}</p>
       <p style="margin-top:4px;"><b>Slug:</b> {{ business.slug }}</p>
-      <p style="margin-top:4px;"><b>Member since:</b> {{ business.created_at.strftime('%B %d, %Y') }}</p>
+      <p style="margin-top:4px;"><b>Member since:</b> {{ business.created_at | local_time('%B %d, %Y') }}</p>
     </div>
   </div>
 </div>

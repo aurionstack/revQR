@@ -26,12 +26,15 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_MINUTES: int = 60 * 24 * 7  # 7 days
+    ADMIN_SESSION_MINUTES: int = 60
 
     # App
     APP_URL: str = "http://localhost:8000"
     ENVIRONMENT: str = "development"
     ALLOWED_HOSTS: str = ""
     MAX_LOGO_BYTES: int = 2 * 1024 * 1024
+    MAX_REQUEST_BYTES: int = 3 * 1024 * 1024
+    MAX_WEBHOOK_BYTES: int = 256 * 1024
 
     @property
     def cookie_secure(self) -> bool:
@@ -41,10 +44,10 @@ class Settings(BaseSettings):
     def allowed_hosts(self) -> list[str]:
         configured = [host.strip() for host in self.ALLOWED_HOSTS.split(",") if host.strip()]
         app_host = urlparse(self.APP_URL).hostname
-        # Heroku assigns an immutable generated hostname to newer apps.  It can
-        # differ from APP_URL (for example when APP_URL is a custom domain), so
-        # trust Heroku-routed hostnames while still rejecting arbitrary hosts.
-        defaults = ["localhost", "127.0.0.1", "testserver", "*.herokuapp.com"]
+        # Production aliases (including a Heroku hostname) must be explicitly
+        # configured. Trusting every *.herokuapp.com host enables Host-header
+        # confusion and weakens canonical-origin checks.
+        defaults = ["localhost", "127.0.0.1", "testserver"]
         if app_host:
             defaults.append(app_host)
         return list(dict.fromkeys(configured + defaults))

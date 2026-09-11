@@ -2,7 +2,7 @@ import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
@@ -77,6 +77,17 @@ app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 
 # Jinja2 templates
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+def local_time_filter(dt: datetime, fmt: str = '%b %d, %Y %I:%M %p') -> str:
+    """Convert UTC datetime to local time (IST +05:30) for display."""
+    if not dt:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    return dt.astimezone(ist_tz).strftime(fmt)
+
+templates.env.filters["local_time"] = local_time_filter
 
 
 from slowapi import _rate_limit_exceeded_handler

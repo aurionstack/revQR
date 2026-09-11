@@ -108,7 +108,7 @@
         {% endif %}
       </div>
       <div class="receipt-col-md">
-        <span class="receipt-time">{{ review.created_at.strftime('%b %d, %I:%M %p') }}</span>
+        <span class="receipt-time">{{ review.created_at | local_time('%b %d, %I:%M %p') }}</span>
       </div>
     </div>
     {% endfor %}
