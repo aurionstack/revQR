@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 API_KEYS = [
     key for key in (
         settings.GEMINI_API_KEY,
-        "REMOVED_GEMINI_KEY",
-        "REMOVED_GEMINI_KEY"
+        settings.GEMINI_API_KEY_2,
+        settings.GEMINI_API_KEY_3
     ) if key
 ]
 # Remove duplicates while preserving order
