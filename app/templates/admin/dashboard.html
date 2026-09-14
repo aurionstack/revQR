@@ -39,10 +39,12 @@
         <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg></span>
         My Admin Dashboard
       </a>
-      <a href="/logout" class="dash-nav-item">
+      <form method="post" action="/logout">
+      <button type="submit" class="dash-nav-item dash-nav-button">
         <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
         Log Out
-      </a>
+      </button>
+      </form>
     </nav>
   </aside>
 
@@ -240,7 +242,7 @@
         <article class="admin-order-card">
           <div>
             <strong>{{ item.business.name }}</strong>
-            <p class="meta-line">{{ order.quantity }} × stand · ₹{{ order.amount // 100 }} · {{ order.paid_at.strftime('%d %b %Y') if order.paid_at else '' }}</p>
+            <p class="meta-line">{{ order.quantity }} × stand · ₹{{ order.amount // 100 }} · {{ order.paid_at | local_time('%d %b %Y') if order.paid_at else '' }}</p>
             <p class="admin-order-address">{{ order.shipping_name }} · {{ order.shipping_phone }}<br />{{ order.shipping_address }} · {{ order.shipping_postal_code }}</p>
           </div>
           <form method="POST" action="/admin/stand-orders/{{ order.id }}/status" class="admin-order-status">

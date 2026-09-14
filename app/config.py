@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     # App
     APP_URL: str = "http://localhost:8000"
     ENVIRONMENT: str = "development"
+    APP_TIMEZONE: str = "Asia/Kolkata"
     ALLOWED_HOSTS: str = ""
     MAX_LOGO_BYTES: int = 2 * 1024 * 1024
     MAX_REQUEST_BYTES: int = 3 * 1024 * 1024

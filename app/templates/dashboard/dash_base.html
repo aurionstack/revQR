@@ -64,10 +64,12 @@
         Settings
       </a>
       <div class="dash-nav-divider"></div>
-      <a href="/logout" class="dash-nav-item">
+      <form method="post" action="/logout">
+      <button type="submit" class="dash-nav-item dash-nav-button">
         <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
         Log Out
-      </a>
+      </button>
+      </form>
     </nav>
   </div>
 </div>
@@ -123,10 +125,12 @@
     </nav>
 
     <div class="dash-sidebar-footer">
-      <a href="/logout" class="dash-nav-item" style="padding:0;">
+      <form method="post" action="/logout">
+      <button type="submit" class="dash-nav-item dash-nav-button" style="padding:0;">
         <span class="dash-nav-icon"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
         Log Out
-      </a>
+      </button>
+      </form>
     </div>
   </aside>
 

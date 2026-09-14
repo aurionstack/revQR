@@ -16,6 +16,7 @@ from app.services.auth import (
     create_access_token,
     get_password_hash,
     verify_password,
+    verify_password_or_dummy,
     get_current_business_optional,
     create_pre_auth_token,
     verify_pre_auth_token,
@@ -25,6 +26,9 @@ from app.services.auth import (
     verify_email_otp,
     validate_password_strength,
     set_access_cookie,
+    set_flow_cookie,
+    request_cookie,
+    delete_cookie_variants,
 )
 import pyotp
 from app.config import settings
@@ -64,7 +68,7 @@ def auth_destination(business: Business, next_url: str = "") -> str:
 
 
 def authenticated_response(business: Business, destination: str) -> RedirectResponse:
-    expiry_minutes = 12 * 60 if business.is_admin else settings.JWT_EXPIRATION_MINUTES
+    expiry_minutes = settings.ADMIN_SESSION_MINUTES if business.is_admin else settings.JWT_EXPIRATION_MINUTES
     token = create_access_token(
         data={"sub": str(business.id), "password_version": business.password_version},
         expires_delta=timedelta(minutes=expiry_minutes),
@@ -96,14 +100,11 @@ async def begin_email_flow(
     route = "/verify-email" if purpose == "email_verification" else "/recover/verify"
     response = RedirectResponse(route, status_code=status.HTTP_302_FOUND)
     cookie_name = "email_verify_token" if purpose == "email_verification" else "recovery_flow_token"
-    response.set_cookie(
+    set_flow_cookie(
+        response,
         cookie_name,
         create_email_flow_token(str(business.id), purpose, safe_next_url(next_url)),
-        httponly=True,
-        secure=settings.cookie_secure,
         max_age=15 * 60,
-        samesite="lax",
-        path="/",
     )
     return response, sent, retry_after
 
@@ -248,14 +249,23 @@ async def login(
     email_clean = normalize_email(email) or email.strip().lower()
     result = await db.execute(select(Business).filter(Business.email == email_clean))
     business = result.scalars().first()
-    
-    if not business or not business.is_active or not verify_password(password, business.password_hash):
+    password_valid, upgraded_hash = verify_password_or_dummy(
+        password,
+        business.password_hash if business else None,
+    )
+
+    if not business or not business.is_active or not password_valid:
         return templates.TemplateResponse(
             request,
             "auth/login.html",
             {"error": "Incorrect email or password."},
             status_code=status.HTTP_401_UNAUTHORIZED
         )
+
+    if upgraded_hash:
+        business.password_hash = upgraded_hash
+        db.add(business)
+        await db.commit()
     
     next_url = safe_next_url(next or request.query_params.get("next"))
 
@@ -274,14 +284,7 @@ async def login(
         # Generate pre-auth token and redirect to 2FA page
         pre_auth_token = create_pre_auth_token(str(business.id), next_url)
         response = RedirectResponse(url="/login/2fa", status_code=status.HTTP_302_FOUND)
-        response.set_cookie(
-            key="pre_auth_token",
-            value=pre_auth_token,
-            httponly=True,
-            secure=settings.cookie_secure,
-            max_age=600,  # 10 minutes
-            samesite="lax",
-        )
+        set_flow_cookie(response, "pre_auth_token", pre_auth_token, max_age=600)
         return response
     
     return authenticated_response(business, auth_destination(business, next_url))
@@ -300,7 +303,7 @@ async def email_flow_business(
     db: AsyncSession,
 ) -> tuple[dict, Business] | None:
     cookie_name = "email_verify_token" if purpose == "email_verification" else "recovery_flow_token"
-    payload = verify_email_flow_token(request.cookies.get(cookie_name), purpose)
+    payload = verify_email_flow_token(request_cookie(request, cookie_name), purpose)
     if not payload:
         return None
     try:
@@ -359,7 +362,7 @@ async def verify_email_post(
     await db.commit()
     destination = auth_destination(business, payload.get("next", ""))
     response = authenticated_response(business, destination)
-    response.delete_cookie("email_verify_token", path="/")
+    delete_cookie_variants(response, "email_verify_token")
     return response
 
 
@@ -387,19 +390,19 @@ async def verify_email_resend(
 
 @router.get("/login/2fa", response_class=HTMLResponse)
 async def login_2fa_page(request: Request):
-    pre_auth_token = request.cookies.get("pre_auth_token")
+    pre_auth_token = request_cookie(request, "pre_auth_token")
     if not pre_auth_token or not verify_pre_auth_token(pre_auth_token):
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     return templates.TemplateResponse(request, "auth/login_2fa.html")
 
 @router.post("/login/2fa", response_class=HTMLResponse)
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def login_2fa(
     request: Request,
     totp_code: str = Form(...),
     db: AsyncSession = Depends(get_db)
 ):
-    pre_auth_token = request.cookies.get("pre_auth_token")
+    pre_auth_token = request_cookie(request, "pre_auth_token")
     payload = verify_pre_auth_token(pre_auth_token) if pre_auth_token else None
     business_id_str = payload.get("sub") if payload else None
     
@@ -425,16 +428,17 @@ async def login_2fa(
     redirect_target = auth_destination(business, payload.get("next", ""))
     response = authenticated_response(business, redirect_target)
     # Clean up pre-auth cookie
-    response.delete_cookie("pre_auth_token")
+    delete_cookie_variants(response, "pre_auth_token")
     return response
 
 # ── Logout ────────────────────────────────────────────────────────────────────
 
-@router.get("/logout")
+@router.post("/logout")
 async def logout():
     response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     for cookie_name in ("access_token", "pre_auth_token", "email_verify_token", "recovery_flow_token"):
-        response.delete_cookie(cookie_name, path="/")
+        delete_cookie_variants(response, cookie_name)
+    response.headers["Clear-Site-Data"] = '"cache", "cookies", "storage"'
     return response
 
 
@@ -531,7 +535,7 @@ async def recovery_code_post(
         f"/reset-password?token={token}",
         status_code=status.HTTP_302_FOUND,
     )
-    response.delete_cookie("recovery_flow_token", path="/")
+    delete_cookie_variants(response, "recovery_flow_token")
     return response
 
 

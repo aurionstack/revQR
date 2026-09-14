@@ -23,11 +23,13 @@ from app.services.auth import (
 )
 from app.services.plans import add_months
 from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
+from app.services.time import format_local_datetime
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.filters["local_time"] = format_local_datetime
 
 
 def slugify(text: str) -> str:

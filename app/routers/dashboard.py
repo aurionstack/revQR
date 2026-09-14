@@ -1,6 +1,6 @@
 import uuid
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Optional
 from urllib.parse import quote
 
@@ -26,9 +26,11 @@ from app.services.google_reviews import (
     normalize_google_review_link,
 )
 from app.services.rate_limit import limiter
+from app.services.time import app_timezone, as_local_datetime, format_local_datetime, local_now
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.filters["local_time"] = format_local_datetime
 
 @router.get("", response_class=HTMLResponse)
 async def dashboard_home(
@@ -72,7 +74,7 @@ async def dashboard_home(
     # Simple Python generation since doing group_by date in SQLite/PG varies
     chart_data = []
     chart_max = 0
-    today = datetime.now(timezone.utc).date()
+    today = local_now().date()
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         # Count scans on this day
@@ -80,14 +82,18 @@ async def dashboard_home(
         chart_data.append({"label": day.strftime("%a"), "count": 0, "date": day})
 
     # Fetch last 7 days scans
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    seven_days_ago = datetime.combine(
+        today - timedelta(days=6),
+        time.min,
+        tzinfo=app_timezone(),
+    ).astimezone(timezone.utc)
     recent_scans_res = await db.execute(
         select(Scan.scanned_at).filter(Scan.business_id == business.id, Scan.scanned_at >= seven_days_ago)
     )
     recent_scans = recent_scans_res.scalars().all()
     
     for scan_dt in recent_scans:
-        scan_date = scan_dt.date()
+        scan_date = as_local_datetime(scan_dt).date()
         for cd in chart_data:
             if cd["date"] == scan_date:
                 cd["count"] += 1
@@ -198,8 +204,6 @@ async def dashboard_ai_reply(
         "rating": review.rating,
     })
 
-import json
-
 # ── WhatsApp Review Request Generator ────────────────────────────────────────
 
 @router.get("/whatsapp", response_class=HTMLResponse)
@@ -230,13 +234,11 @@ async def dashboard_whatsapp(
         },
     ]
 
-    wa_templates_json = json.dumps(wa_templates, ensure_ascii=False)
 
     return templates.TemplateResponse(request, "dashboard/whatsapp.html", {
         "business": business,
         "review_link": review_link,
         "wa_templates": wa_templates,
-        "wa_templates_json": wa_templates_json,
     })
 
 

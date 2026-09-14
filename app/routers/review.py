@@ -3,6 +3,7 @@ import json
 from typing import Optional, Annotated
 from datetime import datetime, timezone
 import hashlib
+import hmac
 
 from fastapi import APIRouter, Depends, Request, Form, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Business, Scan, Review, Feedback
 from app.services.rate_limit import limiter
+from app.services.time import format_local_datetime
 from app.services.ai import generate_review_variations
 from app.services.google_reviews import GoogleReviewLinkError, google_review_destination
 from app.config import settings
@@ -20,6 +22,7 @@ from app.main import TEMPLATES_DIR
 
 router = APIRouter(prefix="/review", tags=["Review Flow"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.filters["local_time"] = format_local_datetime
 
 def get_client_ip(request: Request) -> str:
     """Helper to get client IP for hashing in Scan model."""
@@ -60,8 +63,12 @@ async def review_landing(request: Request, business_slug: str, source: str = "",
     
     # Record scan
     ip = get_client_ip(request)
-    ip_hash = hashlib.sha256(ip.encode()).hexdigest()
-    user_agent = request.headers.get("user-agent")
+    ip_hash = hmac.new(
+        settings.JWT_SECRET_KEY.encode("utf-8"),
+        ip.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    user_agent = (request.headers.get("user-agent") or "")[:500] or None
     
     new_scan = Scan(
         business_id=business.id,
@@ -229,6 +236,8 @@ async def mark_review_copied(
     business_slug: str,
     db: AsyncSession = Depends(get_db),
 ):
+    if request.headers.get("content-type", "").split(";", 1)[0].lower() != "application/json":
+        raise HTTPException(status_code=415, detail="Content-Type must be application/json.")
     payload = await request.json()
     review = await _review_for_business(db, business_slug, str(payload.get("review_id", "")))
     if not review:
@@ -248,6 +257,8 @@ async def mark_review_redirected(
     business_slug: str,
     db: AsyncSession = Depends(get_db),
 ):
+    if request.headers.get("content-type", "").split(";", 1)[0].lower() != "application/json":
+        raise HTTPException(status_code=415, detail="Content-Type must be application/json.")
     payload = await request.json()
     review = await _review_for_business(db, business_slug, str(payload.get("review_id", "")))
     if not review:

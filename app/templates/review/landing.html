@@ -23,7 +23,7 @@
           {% endif %}
           <div class="biz-name">{{ business.name }}</div>
         </div>
-        <p class="meta-line">TICKET #{{ scan_id[:4] | upper if scan_id else '0000' }} · {{ now.strftime('%b %d, %I:%M %p') | upper if now else 'TODAY' }}</p>
+        <p class="meta-line">TICKET #{{ scan_id[:4] | upper if scan_id else '0000' }} · {{ (now | local_time('%b %d, %I:%M %p')) | upper if now else 'TODAY' }}</p>
       </div>
 
       <div class="perf"></div>

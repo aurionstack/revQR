@@ -6,7 +6,7 @@ import uuid
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, Response, status
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -18,10 +18,26 @@ from app.schemas import TokenData
 
 # ── Password Hashing ──────────────────────────────────────────────────────────
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
+TOKEN_ALGORITHM = "HS256"
+TOKEN_ISSUER = "revqr"
+TOKEN_AUDIENCE = "revqr-web"
+TOKEN_REQUIRED_CLAIMS = ["exp", "iat", "nbf", "iss", "aud", "sub", "type", "jti"]
+_DUMMY_PASSWORD_HASH = pwd_context.hash("TimingOnly-Not-A-Real-Account-9c9f7d")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def verify_and_update_password(plain_password: str, hashed_password: str) -> tuple[bool, str | None]:
+    """Verify a password and transparently upgrade legacy bcrypt hashes."""
+    return pwd_context.verify_and_update(plain_password, hashed_password)
+
+
+def verify_password_or_dummy(plain_password: str, hashed_password: str | None) -> tuple[bool, str | None]:
+    """Use equal-cost verification for unknown accounts to reduce timing leaks."""
+    return verify_and_update_password(plain_password, hashed_password or _DUMMY_PASSWORD_HASH)
+
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
@@ -43,88 +59,98 @@ def validate_password_strength(password: str) -> str | None:
 
 # ── JWT Tokens ────────────────────────────────────────────────────────────────
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+def _token_claims(subject: str, token_type: str, expires_delta: timedelta) -> dict:
     now = datetime.now(timezone.utc)
-    to_encode.update({"exp": expire, "iat": now, "jti": uuid.uuid4().hex, "type": "access"})
+    return {
+        "sub": str(subject),
+        "type": token_type,
+        "iss": TOKEN_ISSUER,
+        "aud": TOKEN_AUDIENCE,
+        "iat": now,
+        "nbf": now,
+        "exp": now + expires_delta,
+        "jti": uuid.uuid4().hex,
+    }
+
+
+def _decode_token(token: str, expected_type: str) -> dict:
+    payload = jwt.decode(
+        token,
+        settings.JWT_SECRET_KEY,
+        algorithms=[TOKEN_ALGORITHM],
+        audience=TOKEN_AUDIENCE,
+        issuer=TOKEN_ISSUER,
+        options={"require": TOKEN_REQUIRED_CLAIMS, "strict_aud": True},
+    )
+    if payload.get("type") != expected_type:
+        raise jwt.InvalidTokenError("Unexpected token type")
+    return payload
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    subject = str(data.get("sub") or "")
+    if not subject:
+        raise ValueError("Access tokens require a subject")
+    lifetime = expires_delta or timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+    to_encode = {**data, **_token_claims(subject, "access", lifetime)}
     encoded_jwt = jwt.encode(
-        to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+        to_encode, settings.JWT_SECRET_KEY, algorithm=TOKEN_ALGORITHM
     )
     return encoded_jwt
 
 def create_password_reset_token(email: str, business_id: str, password_version: int = 0) -> str:
     """Create a 30-minute signed token specifically for password reset."""
-    expire = datetime.now(timezone.utc) + timedelta(minutes=30)
     payload = {
-        "sub": str(business_id),
+        **_token_claims(str(business_id), "password_reset", timedelta(minutes=30)),
         "email": email.lower().strip(),
-        "type": "password_reset",
         "password_version": password_version,
-        "iat": datetime.now(timezone.utc),
-        "jti": uuid.uuid4().hex,
-        "exp": expire
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=TOKEN_ALGORITHM)
 
 def verify_password_reset_token(token: str) -> Optional[dict]:
     """Verify password reset token and return payload if valid and unexpired."""
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        if payload.get("type") != "password_reset":
-            return None
+        payload = _decode_token(token, "password_reset")
         if not payload.get("sub") or not payload.get("email"):
             return None
         return payload
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 def create_pre_auth_token(business_id: str, next_url: str = "") -> str:
     """Create a short-lived token for the 2FA verification step."""
-    expire = datetime.now(timezone.utc) + timedelta(minutes=10)
     payload = {
-        "sub": str(business_id),
-        "type": "pre_auth",
+        **_token_claims(str(business_id), "pre_auth", timedelta(minutes=10)),
         "next": next_url if next_url.startswith("/") and not next_url.startswith("//") else "",
-        "exp": expire
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=TOKEN_ALGORITHM)
 
 def verify_pre_auth_token(token: str) -> Optional[dict]:
     """Verify pre-auth token and return its payload if valid."""
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        if payload.get("type") != "pre_auth":
-            return None
+        payload = _decode_token(token, "pre_auth")
         return payload if payload.get("sub") else None
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 
 def create_email_flow_token(business_id: str, purpose: str, next_url: str = "") -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     payload = {
-        "sub": str(business_id),
-        "type": "email_flow",
+        **_token_claims(str(business_id), "email_flow", timedelta(minutes=15)),
         "purpose": purpose,
         "next": next_url if next_url.startswith("/") and not next_url.startswith("//") else "",
-        "exp": expire,
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=TOKEN_ALGORITHM)
 
 
 def verify_email_flow_token(token: str | None, purpose: str) -> Optional[dict]:
     if not token:
         return None
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        if payload.get("type") != "email_flow" or payload.get("purpose") != purpose:
+        payload = _decode_token(token, "email_flow")
+        if payload.get("purpose") != purpose:
             return None
         return payload if payload.get("sub") else None
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 
@@ -188,10 +214,30 @@ def clear_email_otp(business: Business) -> None:
     business.email_otp_attempts = 0
 
 
+def cookie_name(name: str) -> str:
+    """Use host-only cookie names in HTTPS deployments without breaking local development."""
+    if not settings.cookie_secure:
+        return name
+    aliases = {"access_token": "session", "pre_auth_token": "pre-auth"}
+    suffix = aliases.get(name, name.replace("_", "-"))
+    return f"__Host-revqr-{suffix}"
+
+
+def request_cookie(request: Request, name: str) -> str | None:
+    return request.cookies.get(cookie_name(name)) or request.cookies.get(name)
+
+
+def delete_cookie_variants(response: Response, name: str) -> None:
+    response.delete_cookie(name, path="/")
+    secured_name = cookie_name(name)
+    if secured_name != name:
+        response.delete_cookie(secured_name, path="/", secure=True, httponly=True, samesite="lax")
+
+
 def set_access_cookie(response: Response, token: str, max_age_seconds: int | None = None) -> None:
     max_age = max_age_seconds or settings.JWT_EXPIRATION_MINUTES * 60
     response.set_cookie(
-        key="access_token",
+        key=cookie_name("access_token"),
         value=token,
         httponly=True,
         secure=settings.cookie_secure,
@@ -204,7 +250,7 @@ def set_access_cookie(response: Response, token: str, max_age_seconds: int | Non
 
 def set_flow_cookie(response: Response, name: str, token: str, max_age: int = 900) -> None:
     response.set_cookie(
-        key=name,
+        key=cookie_name(name),
         value=token,
         httponly=True,
         secure=settings.cookie_secure,
@@ -226,7 +272,7 @@ async def get_current_business(
     Dependency to get the current business from the JWT token in the HttpOnly cookie.
     Raises HTTPException 401 if not authenticated.
     """
-    token = request.cookies.get("access_token")
+    token = request_cookie(request, "access_token")
     if not token:
         # Check authorization header as fallback (for testing)
         auth_header = request.headers.get("Authorization")
@@ -241,14 +287,7 @@ async def get_current_business(
         )
 
     try:
-        payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-        )
-        if payload.get("type") != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-            )
+        payload = _decode_token(token, "access")
         business_id_str = payload.get("sub")
         if business_id_str is None:
             raise HTTPException(
@@ -256,7 +295,7 @@ async def get_current_business(
                 detail="Could not validate credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-    except JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",

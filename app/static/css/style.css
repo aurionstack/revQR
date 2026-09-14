@@ -850,6 +850,13 @@ textarea::placeholder {
   transition: all .15s ease;
   border-left: 3px solid transparent;
 }
+.dash-nav-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
 .dash-nav-item:hover {
   color: var(--ink);
   background: var(--paper-deep);

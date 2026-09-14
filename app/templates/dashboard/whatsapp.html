@@ -55,7 +55,7 @@
 
 <!-- Embed templates safely as JSON to preserve emojis and Unicode perfectly -->
 <script id="waTemplatesData" type="application/json">
-{{ wa_templates_json | safe }}
+{{ wa_templates | tojson }}
 </script>
 
 <!-- Template Cards -->

@@ -14,6 +14,7 @@ httpx
 Pillow
 python-dotenv
 pydantic-settings
+tzdata>=2026.1
 slowapi
 razorpay
 pyotp

@@ -1,6 +1,10 @@
 import pytest
+from types import SimpleNamespace
 
+import app.services.ai as ai
 from app.services.ai import (
+    _candidate_key_indexes,
+    _generate_content_with_fallback,
     _get_fallback_variations,
     _parse_customer_details,
     _validate_review_relevance,
@@ -58,3 +62,46 @@ def test_fallback_keeps_supplied_details_in_every_variation():
         assert "great service" in lowered
         assert "dr mehta" in lowered
         assert "root canal" in lowered
+
+
+def test_fallback_does_not_invent_details_when_customer_supplies_none():
+    variations = _get_fallback_variations(5, "Example Business", "")
+    invented_terms = {"staff", "clean", "service", "food", "price", "fast"}
+    for review in variations.values():
+        assert not invented_terms.intersection(review.lower().split())
+
+
+def test_key_order_rotates_and_skips_cooled_down_key(monkeypatch):
+    monkeypatch.setattr(ai, "API_KEYS", ["first", "second", "third"])
+    monkeypatch.setattr(ai, "_key_cursor", 0)
+    monkeypatch.setattr(ai, "_key_retry_after", {0: 200.0})
+    assert _candidate_key_indexes(now=100.0) == [1, 2]
+    assert _candidate_key_indexes(now=100.0) == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_gemini_failure_uses_next_configured_key(monkeypatch):
+    attempted: list[str] = []
+
+    class FakeModels:
+        def __init__(self, key: str):
+            self.key = key
+
+        async def generate_content(self, **_kwargs):
+            attempted.append(self.key)
+            if self.key == "failed-key":
+                raise RuntimeError("provider rejected key")
+            return SimpleNamespace(text="ok")
+
+    class FakeClient:
+        def __init__(self, api_key: str):
+            self.aio = SimpleNamespace(models=FakeModels(api_key))
+
+    monkeypatch.setattr(ai, "API_KEYS", ["failed-key", "working-key"])
+    monkeypatch.setattr(ai, "_key_cursor", 0)
+    monkeypatch.setattr(ai, "_key_retry_after", {})
+    monkeypatch.setattr(ai.genai, "Client", FakeClient)
+
+    response = await _generate_content_with_fallback("model", "prompt", None)
+    assert response.text == "ok"
+    assert attempted == ["failed-key", "working-key"]

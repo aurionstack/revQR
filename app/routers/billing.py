@@ -25,6 +25,8 @@ async def create_order(
     Create a Razorpay order for QR code generation.
     Prices and quantities are always validated on the server.
     """
+    if request.headers.get("content-type", "").split(";", 1)[0].lower() != "application/json":
+        return JSONResponse({"error": "Content-Type must be application/json."}, status_code=415)
     try:
         payload = await request.json()
     except (json.JSONDecodeError, ValueError):
@@ -112,6 +114,8 @@ async def razorpay_webhook(
     """
     signature = request.headers.get("X-Razorpay-Signature", "")
     body = await request.body()
+    if len(body) > settings.MAX_WEBHOOK_BYTES:
+        raise HTTPException(status_code=413, detail="Webhook payload is too large")
 
     success = await razorpay_service.handle_webhook(body, signature, db)
 

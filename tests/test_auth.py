@@ -57,7 +57,8 @@ async def test_login(client, test_business):
     assert "/dashboard" in response.headers.get("location", "")
     
     # Check if cookie is set
-    assert "access_token" in response.cookies
+    from app.services.auth import cookie_name
+    assert cookie_name("access_token") in response.cookies
 
 @pytest.mark.asyncio
 async def test_login_invalid_password(client, test_business):
@@ -82,7 +83,7 @@ async def test_logout(client, test_business):
         follow_redirects=False
     )
     # Then logout
-    response = client.get("/logout", follow_redirects=False)
+    response = client.post("/logout", follow_redirects=False)
     
     # Cookie should be cleared
     assert "access_token=" in response.headers.get("set-cookie", "")

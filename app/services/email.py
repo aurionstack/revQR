@@ -112,6 +112,8 @@ async def send_password_reset_email(to_email: str, reset_url: str, business_name
     Runs asynchronously without blocking the web request.
     """
     subject = "Reset Your revQR Password"
+    safe_name = escape(business_name, quote=True)
+    safe_reset_url = escape(reset_url, quote=True)
 
     text_content = f"""Hi {business_name},
 
@@ -141,10 +143,10 @@ The revQR Team
     <body>
       <div class="card">
         <h2 style="margin-top:0; font-size:20px;">Reset Your Password</h2>
-        <p>Hi {business_name},</p>
+        <p>Hi {safe_name},</p>
         <p>We received a request to reset the password for your revQR account.</p>
         <div style="text-align:center;">
-          <a href="{reset_url}" class="btn">Set New Password</a>
+          <a href="{safe_reset_url}" class="btn">Set New Password</a>
         </div>
         <p class="hint">This secure link is valid for <strong>30 minutes</strong>. If you did not request this reset, you can safely ignore this email — no one can access your account without access to your email inbox.</p>
         <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;" />

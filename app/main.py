@@ -2,7 +2,7 @@ import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
@@ -19,6 +19,7 @@ from app.services.seo import (
     site_url,
     sitemap_xml,
 )
+from app.services.time import format_local_datetime
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,14 @@ async def lifespan(app: FastAPI):
     if settings.ENVIRONMENT.lower() == "production":
         if settings.JWT_SECRET_KEY == "change-me-in-production" or len(settings.JWT_SECRET_KEY) < 32:
             raise RuntimeError("JWT_SECRET_KEY must be a unique value of at least 32 characters in production.")
+        if settings.JWT_ALGORITHM != "HS256":
+            raise RuntimeError("JWT_ALGORITHM must be HS256.")
+        if not settings.APP_URL.lower().startswith("https://"):
+            raise RuntimeError("APP_URL must use HTTPS in production.")
+        if not 15 <= settings.ADMIN_SESSION_MINUTES <= 120:
+            raise RuntimeError("ADMIN_SESSION_MINUTES must be between 15 and 120 in production.")
+        if settings.MAX_REQUEST_BYTES < settings.MAX_LOGO_BYTES:
+            raise RuntimeError("MAX_REQUEST_BYTES must be at least MAX_LOGO_BYTES.")
         if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
             logging.warning("SMTP is not fully configured; email verification and recovery cannot deliver codes.")
     # Startup — ensure database tables and seed default super admin
@@ -64,6 +73,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url=None if settings.ENVIRONMENT.lower() == "production" else "/docs",
     redoc_url=None if settings.ENVIRONMENT.lower() == "production" else "/redoc",
+    openapi_url=None if settings.ENVIRONMENT.lower() == "production" else "/openapi.json",
 )
 
 
@@ -78,16 +88,7 @@ app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 # Jinja2 templates
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-def local_time_filter(dt: datetime, fmt: str = '%b %d, %Y %I:%M %p') -> str:
-    """Convert UTC datetime to local time (IST +05:30) for display."""
-    if not dt:
-        return ""
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    ist_tz = timezone(timedelta(hours=5, minutes=30))
-    return dt.astimezone(ist_tz).strftime(fmt)
-
-templates.env.filters["local_time"] = local_time_filter
+templates.env.filters["local_time"] = format_local_datetime
 
 
 from slowapi import _rate_limit_exceeded_handler
@@ -109,6 +110,14 @@ app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
     """Block cross-origin state changes and apply baseline browser protections."""
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > settings.MAX_REQUEST_BYTES:
+                return JSONResponse(status_code=413, content={"detail": "Request body is too large"})
+        except ValueError:
+            return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length header"})
+
     if settings.ENVIRONMENT.lower() == "production":
         canonical = urlparse(settings.APP_URL)
         canonical_host = canonical.hostname
@@ -124,6 +133,10 @@ async def security_middleware(request: Request, call_next):
             )
 
     if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path != "/billing/webhook":
+        fetch_site = request.headers.get("sec-fetch-site", "").lower()
+        if fetch_site in {"cross-site", "same-site"}:
+            return JSONResponse(status_code=403, content={"detail": "Cross-origin request blocked"})
+
         source = request.headers.get("origin") or request.headers.get("referer")
         if source:
             source_parts = urlparse(source)
@@ -133,13 +146,36 @@ async def security_middleware(request: Request, call_next):
             request_origin = f"{request.url.scheme}://{request.url.netloc}".lower()
             if source_origin not in {expected_origin, request_origin}:
                 return JSONResponse(status_code=403, content={"detail": "Cross-origin request blocked"})
+        elif settings.ENVIRONMENT.lower() == "production" and fetch_site != "same-origin":
+            return JSONResponse(status_code=403, content={"detail": "Request origin could not be verified"})
 
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("X-XSS-Protection", "0")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+    response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
+    content_security_policy = (
+        "default-src 'self'; "
+        "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com https://checkout.razorpay.com https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: blob: https://*.razorpay.com; "
+        "connect-src 'self' https://*.razorpay.com; "
+        "frame-src https://*.razorpay.com; media-src 'none'; worker-src 'self' blob:; manifest-src 'self'"
+    )
+    if settings.ENVIRONMENT.lower() == "production":
+        content_security_policy += "; upgrade-insecure-requests"
+    response.headers.setdefault("Content-Security-Policy", content_security_policy)
     response.headers.setdefault("Content-Language", "en-IN")
+    current_vary = response.headers.get("Vary", "")
+    vary_values = {value.strip() for value in current_vary.split(",") if value.strip()}
+    vary_values.update({"Origin", "Sec-Fetch-Site"})
+    response.headers["Vary"] = ", ".join(sorted(vary_values))
     public_indexable_paths = {"/", "/features", "/pricing", "/robots.txt", "/sitemap.xml"}
     if request.url.path in public_indexable_paths:
         response.headers.setdefault("Cache-Control", "public, max-age=300, stale-while-revalidate=86400")
@@ -163,6 +199,7 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
     if exc.status_code == 401 and (is_html_request or is_protected_web_path):
         response = RedirectResponse(url=f"/login?next={path}", status_code=status.HTTP_302_FOUND)
         response.delete_cookie("access_token")
+        response.delete_cookie("__Host-revqr-session", path="/", secure=True, httponly=True, samesite="lax")
         return response
 
     if exc.status_code == 403 and (is_html_request or is_protected_web_path):
