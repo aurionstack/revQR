@@ -15,15 +15,16 @@
       <div class="dash-brand-name">{{ business.name }}</div>
       <div class="dash-brand-sub">Dashboard</div>
     </div>
-    <button class="dash-mobile-toggle" id="dashMobileToggle">
+    <button class="dash-mobile-toggle" id="dashMobileToggle" type="button" aria-controls="dashMobileMenu" aria-expanded="false">
       <span>☰</span> Menu
     </button>
   </div>
 </div>
 
 <!-- Mobile overlay menu -->
-<div class="dash-mobile-menu" id="dashMobileMenu">
-  <div class="dash-mobile-menu-inner">
+<div class="dash-mobile-menu" id="dashMobileMenu" aria-hidden="true">
+  <div class="dash-mobile-menu-inner" role="dialog" aria-modal="true" aria-label="Dashboard navigation">
+    <button class="dash-mobile-close" id="dashMobileClose" type="button" aria-label="Close navigation">×</button>
     <div class="dash-brand" style="margin-bottom:16px;">
       <div class="dash-brand-name">{{ business.name }}</div>
       <div class="dash-brand-sub">Dashboard</div>

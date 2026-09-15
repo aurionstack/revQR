@@ -520,16 +520,40 @@
   function initMobileNav() {
     var toggle = document.getElementById("dashMobileToggle");
     var menu = document.getElementById("dashMobileMenu");
+    var closeButton = document.getElementById("dashMobileClose");
     if (!toggle || !menu) return;
 
+    function setMenuOpen(isOpen) {
+      menu.classList.toggle("open", isOpen);
+      menu.setAttribute("aria-hidden", isOpen ? "false" : "true");
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      document.body.classList.toggle("mobile-menu-open", isOpen);
+      if (isOpen && closeButton) closeButton.focus();
+      if (!isOpen && document.activeElement === closeButton) toggle.focus();
+    }
+
     toggle.addEventListener("click", function () {
-      menu.classList.toggle("open");
+      setMenuOpen(!menu.classList.contains("open"));
     });
+
+    if (closeButton) {
+      closeButton.addEventListener("click", function () { setMenuOpen(false); });
+    }
 
     // Close on backdrop click
     menu.addEventListener("click", function (e) {
       if (e.target === menu) {
-        menu.classList.remove("open");
+        setMenuOpen(false);
+      }
+    });
+
+    menu.querySelectorAll("a").forEach(function (link) {
+      link.addEventListener("click", function () { setMenuOpen(false); });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && menu.classList.contains("open")) {
+        setMenuOpen(false);
       }
     });
   }

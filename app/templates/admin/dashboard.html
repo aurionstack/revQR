@@ -50,7 +50,7 @@
 
   <!-- Main Content -->
   <main class="dash-main">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+    <div class="admin-page-heading">
       <div>
         <h1 class="dash-title">Client Management</h1>
         <p class="dash-subtitle">Manually create accounts, collect cash payments &amp; unlock QR codes</p>
@@ -82,14 +82,13 @@
 
     <!-- Search / Filter Bar -->
     <div class="source-attribution" style="margin-top:24px; margin-bottom:24px; padding:16px;">
-      <form method="GET" action="/admin" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <form method="GET" action="/admin" class="admin-search-form">
         <input
           type="text"
           name="q"
           value="{{ search_query }}"
           placeholder="Search by business name, slug, email, phone..."
-          class="wa-input"
-          style="flex:1; min-width:240px;"
+          class="wa-input admin-search-input"
         />
         <button type="submit" class="btn btn-primary btn-sm btn-inline">Search</button>
         {% if search_query %}
@@ -99,8 +98,8 @@
     </div>
 
     <!-- Clients Table -->
-    <div class="receipt-table" style="overflow-x:auto;">
-      <div class="receipt-table-head" style="min-width:760px;">
+    <div class="receipt-table admin-client-table">
+      <div class="receipt-table-head admin-client-head">
         <div style="flex:2;">Business &amp; Slug</div>
         <div style="flex:1.5;">Contact</div>
         <div style="flex:1; text-align:center;">Payment</div>
@@ -111,9 +110,9 @@
       {% if clients %}
         {% for item in clients %}
         {% set biz = item.business %}
-        <div class="receipt-row" style="min-width:760px; align-items:center; padding:16px 20px;">
+        <div class="receipt-row admin-client-row">
           <!-- Business & Slug -->
-          <div style="flex:2;">
+          <div class="admin-client-business">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-weight:700; font-size:15px; color:var(--ink);">{{ biz.name }}</span>
               {% if biz.is_admin %}
@@ -129,7 +128,7 @@
           </div>
 
           <!-- Contact -->
-          <div style="flex:1.5;">
+          <div class="admin-client-contact">
             <div style="font-size:13px; color:var(--ink);">{{ biz.email }}</div>
             {% if biz.phone %}
             <div style="font-size:12px; color:var(--ink-faint); margin-top:2px;">📞 {{ biz.phone }}</div>
@@ -137,7 +136,7 @@
           </div>
 
           <!-- Payment Status -->
-          <div style="flex:1; text-align:center;">
+          <div class="admin-client-payment">
             {% if biz.has_active_subscription %}
             <span class="receipt-badge copied" style="display:inline-block; font-size:11px; padding:4px 10px;">
               ✓ Active
@@ -157,7 +156,7 @@
           </div>
 
           <!-- Scans / Reviews -->
-          <div style="flex:1; text-align:center;">
+          <div class="admin-client-metrics">
             <div style="font-family:var(--mono); font-size:13px; font-weight:600; color:var(--ink);">
               {{ item.scans_count }} <span style="font-size:11px; font-weight:400; color:var(--ink-faint);">scans</span>
             </div>
@@ -167,7 +166,7 @@
           </div>
 
           <!-- Actions -->
-          <div style="flex:2; display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+          <div class="admin-client-actions">
             <!-- Standee Kit -->
             <a
               href="/admin/clients/{{ biz.id }}/standee"

@@ -4,6 +4,12 @@
 {% block body_class %}page-full{% endblock %}
 
 {% block content %}
+<div class="dash-mobile-nav admin-form-mobile-nav">
+  <div class="mobile-nav-row">
+    <div><div class="dash-brand-name">New Client</div><div class="dash-brand-sub">Super Admin</div></div>
+    <a href="/admin" class="btn btn-secondary btn-sm btn-inline">← Clients</a>
+  </div>
+</div>
 <div class="dash">
   <aside class="dash-sidebar">
     <div class="dash-brand">
@@ -37,7 +43,7 @@
     <div class="flash flash-error" style="margin-bottom:20px;">{{ error }}</div>
     {% endif %}
 
-    <div class="source-attribution" style="max-width:680px; padding:32px;">
+    <div class="source-attribution admin-form-card" style="max-width:680px; padding:32px;">
       <form method="POST" action="/admin/clients/new">
         <!-- Business Name -->
         <div class="wa-input-group" style="margin-bottom:20px;">
@@ -69,7 +75,7 @@
         </div>
 
         <!-- Email & Password -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+        <div class="admin-form-grid">
           <div class="wa-input-group">
             <label class="wa-label">Client Email (Login)</label>
             <input
@@ -92,7 +98,7 @@
         </div>
 
         <!-- Phone & Brand Color -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+        <div class="admin-form-grid">
           <div class="wa-input-group">
             <label class="wa-label">Client Phone (WhatsApp)</label>
             <input
@@ -143,7 +149,7 @@
         </div>
 
         <!-- Submit -->
-        <div style="display:flex; gap:12px; align-items:center;">
+        <div class="admin-form-actions">
           <button type="submit" class="btn btn-primary" style="padding:14px 32px;">
             Create Client Account
           </button>
