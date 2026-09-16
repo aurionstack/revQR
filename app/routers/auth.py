@@ -34,6 +34,7 @@ import pyotp
 from app.config import settings
 from app.main import TEMPLATES_DIR
 from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
+from app.services.business_context import import_business_context
 from app.services.email import send_security_code_email
 from app.services.rate_limit import limiter
 
@@ -130,6 +131,7 @@ async def signup(
     password: str = Form(...),
     google_place_id: str = Form(""),
     phone: str = Form(""),
+    business_description: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
     form_data = {
@@ -137,6 +139,7 @@ async def signup(
         "email": email,
         "google_place_id": google_place_id,
         "phone": phone,
+        "business_description": business_description,
     }
 
     name = name.strip()
@@ -195,6 +198,8 @@ async def signup(
         # Keep the existing column name for database compatibility. It now stores
         # the direct Google review link (legacy Place IDs are still supported).
         google_place_id=review_link,
+        scraped_context=await import_business_context(review_link, name),
+        custom_prompt=business_description.strip()[:2000] or None,
         phone=phone.strip() or None,
         is_admin=False,
         has_paid=False,

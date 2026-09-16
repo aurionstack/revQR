@@ -192,28 +192,11 @@
     if (!ta) return;
     var text = ta.value;
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        showCopiedFeedback();
-      }).catch(function () {
-        fallbackCopy(text);
-      });
-    } else {
-      fallbackCopy(text);
-    }
+    copyPlainText(text).then(showCopiedFeedback).catch(function () {
+      showToast("Copy was blocked. Select the text and copy it manually.", "error");
+      ta.focus(); ta.select();
+    });
   };
-
-  function fallbackCopy(text) {
-    var tmp = document.createElement("textarea");
-    tmp.value = text;
-    tmp.style.position = "fixed";
-    tmp.style.opacity = "0";
-    document.body.appendChild(tmp);
-    tmp.focus();
-    tmp.select();
-    try { document.execCommand("copy"); showCopiedFeedback(); } catch (e) { /* noop */ }
-    document.body.removeChild(tmp);
-  }
 
   function showCopiedFeedback() {
     var tag = document.getElementById("copiedTag");
@@ -230,6 +213,7 @@
       var finalText = document.getElementById("reviewText");
       fetch("/review/" + slug.value + "/copied", {
         method: "POST",
+        keepalive: true,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           review_id: reviewId.value,
@@ -241,9 +225,12 @@
 
   function copyPlainText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text);
+      return navigator.clipboard.writeText(text).catch(function () { return legacyCopyPlainText(text); });
     }
+    return legacyCopyPlainText(text);
+  }
 
+  function legacyCopyPlainText(text) {
     return new Promise(function (resolve, reject) {
       var tmp = document.createElement("textarea");
       tmp.value = text;
@@ -348,23 +335,34 @@
      ──────────────────────────────────────────────────────────────────────── */
 
   window.postOnGoogle = function (googleUrl) {
-    // Fire beacon
-    var reviewId = document.getElementById("review-id");
-    var slug = document.getElementById("biz-slug");
-    if (reviewId && slug) {
-      fetch("/review/" + slug.value + "/redirected", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ review_id: reviewId.value }),
-      }).catch(function () { /* best-effort */ });
+    var textarea = document.getElementById("reviewText");
+    if (!googleUrl || !textarea || !textarea.value.trim()) {
+      showToast("A review and a connected Google review link are required", "error");
+      return;
     }
+    var button = document.getElementById("postBtn");
+    if (button) button.disabled = true;
+    copyPlainText(textarea.value.trim()).then(function () {
+      showCopiedFeedback();
+      var reviewId = document.getElementById("review-id");
+      var slug = document.getElementById("biz-slug");
+      if (reviewId && slug) {
+        fetch("/review/" + slug.value + "/redirected", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          keepalive: true,
+          body: JSON.stringify({ review_id: reviewId.value }),
+        }).catch(function () { /* best-effort */ });
+      }
 
-    // Open Google in new tab
-    if (googleUrl) {
-      window.open(googleUrl, "_blank");
-    } else {
-      showToast("Google Review link not set for this business", "error");
-    }
+      // Same-tab navigation after copy avoids mobile popup blocking. Google
+      // does not allow third parties to prefill or automatically post reviews.
+      window.location.assign(googleUrl);
+    }).catch(function () {
+      showToast("Copy was blocked. Tap Copy first, then try again. Your draft is still here.", "error", 5000);
+      textarea.focus();
+      textarea.select();
+    }).finally(function () { if (button) button.disabled = false; });
   };
 
 

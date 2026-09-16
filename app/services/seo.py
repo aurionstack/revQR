@@ -6,7 +6,7 @@ PUBLIC_PAGES = (
     ("/features", "Google Review QR Code Features for Local Businesses | revQR"),
     ("/pricing", "revQR Pricing — Google Review QR Codes from ₹999/year"),
 )
-PUBLIC_CONTENT_LAST_MODIFIED = "2026-09-09"
+PUBLIC_CONTENT_LAST_MODIFIED = "2026-09-16"
 
 
 def site_url(app_url: str) -> str:
@@ -22,9 +22,9 @@ def _organization(origin: str) -> dict:
         "url": f"{origin}/",
         "logo": {
             "@type": "ImageObject",
-            "url": f"{origin}/static/brand-icon.png",
-            "width": 512,
-            "height": 512,
+            "url": f"{origin}/static/revqr-logo.svg",
+            "width": 220,
+            "height": 58,
         },
     }
 

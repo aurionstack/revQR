@@ -9,7 +9,7 @@
     <main class="ticket">
       <div class="ticket-head">
         <p class="eyebrow">Get Started</p>
-        <h1 class="biz-name" style="justify-content:center; display:flex;">revQR</h1>
+        <h1 class="biz-name" style="justify-content:center; display:flex;">{% include "components/revqr_logo.html" %}</h1>
         <p class="meta-line">CREATE YOUR BUSINESS ACCOUNT</p>
       </div>
 
@@ -98,6 +98,12 @@
               maxlength="20"
               value="{{ form_data.phone if form_data else '' }}"
             />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="businessDescription">Business description <span style="font-weight:400; text-transform:none;">(optional)</span></label>
+            <textarea class="form-input" id="businessDescription" name="business_description" rows="3" maxlength="2000" placeholder="What does your business do? Mention your main services or products.">{{ form_data.business_description if form_data else '' }}</textarea>
+            <p class="form-hint">We try to import your connected Google profile's public description. Add your own details here if Google restricts access. You can update this in Settings.</p>
           </div>
 
           <div class="continue-row">

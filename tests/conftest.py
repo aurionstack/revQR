@@ -11,6 +11,13 @@ from app.database import get_db
 
 TEST_DATABASE_URL = os.environ.get("DATABASE_URL_TEST", "postgresql+asyncpg://postgres:postgres@localhost:5432/qr_reviews_test")
 
+@pytest.fixture(autouse=True)
+def prevent_live_metadata_requests(monkeypatch):
+    async def unavailable(*args):
+        return '{"version":1,"description":null,"status":"unavailable"}'
+    for module in ("app.routers.auth", "app.routers.dashboard", "app.routers.admin", "app.routers.review"):
+        monkeypatch.setattr(module + ".import_business_context", unavailable)
+
 @pytest.fixture(scope="function", autouse=True)
 async def setup_test_db(request):
     if request.node.get_closest_marker("no_db"):

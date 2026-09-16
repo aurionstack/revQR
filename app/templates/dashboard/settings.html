@@ -102,7 +102,7 @@
 
     <!-- Custom AI Instructions -->
     <div class="form-group">
-      <label class="form-label" for="customPrompt">Custom AI Instructions <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
+      <label class="form-label" for="customPrompt">Business description &amp; review style <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
       <textarea
         class="form-input"
         id="customPrompt"
@@ -111,7 +111,13 @@
         maxlength="2000"
         placeholder="e.g. We are a family-owned Italian restaurant known for wood-fired pizza and friendly service."
       >{{ business.custom_prompt or '' }}</textarea>
-      <p class="form-hint">Describe your business, services, tone, and details customers commonly mention. This context makes generated reviews more relevant.</p>
+      <p class="form-hint">Describe what your business does and its services. We also try to import identifiable public Google details when you connect or change your link. If Google blocks access, this description is the reliable fallback. Background helps with terminology, but never creates customer experiences.</p>
+      {% if context_status is defined and context_status == 'imported' %}
+      <p class="form-hint">✓ Public Google business description imported.</p>
+      {% elif context_status is defined and context_status == 'unavailable' %}
+      <p class="form-hint">Google's public description was unavailable. Your description above will be used instead.</p>
+      {% endif %}
+      <label class="remove-logo-option"><input type="checkbox" name="refresh_business_context" value="true" /> Refresh public Google details when saving</label>
     </div>
 
     <div class="continue-row">

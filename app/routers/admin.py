@@ -24,6 +24,7 @@ from app.services.auth import (
 from app.services.plans import add_months
 from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
 from app.services.time import format_local_datetime
+from app.services.business_context import import_business_context
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
@@ -220,6 +221,7 @@ async def create_client_post(
         password_hash=password_hash,
         phone=phone.strip() if phone else None,
         google_place_id=review_link,
+        scraped_context=await import_business_context(review_link, name),
         brand_color=brand_color if brand_color else "#6366f1",
         has_paid=bool(has_paid),
         is_admin=False,
@@ -408,11 +410,14 @@ async def edit_client_post(
             "admin": admin, "client": biz, "error": "That email address or review URL is already in use."
         }, status_code=400)
     old_email = biz.email
+    refresh_context = biz.google_place_id != review_link or biz.name != updated_name[:255] or not biz.scraped_context
     biz.name = updated_name[:255]
     biz.slug = updated_slug
     biz.email = updated_email
     biz.phone = phone.strip() if phone else None
     biz.google_place_id = review_link
+    if refresh_context:
+        biz.scraped_context = await import_business_context(review_link, biz.name)
     biz.brand_color = brand_color if brand_color else "#6366f1"
     if not biz.is_admin:
         was_paid = biz.has_paid

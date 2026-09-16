@@ -2288,6 +2288,12 @@ textarea::placeholder {
    MOBILE LAYOUT — scoped below tablet width; desktop rules stay unchanged
    ═══════════════════════════════════════════════════════════════════════════ */
 
+.revqr-brand-logo { display: block; width: 140px; height: auto; max-width: 100%; }
+.review-post-steps { padding: 16px; margin-top: 18px; border: 1px dashed var(--line); border-radius: 12px; background: var(--paper-deep); font-size: 12px; line-height: 1.6; }
+.review-post-steps ol { padding-left: 18px; margin: 10px 0; }
+.review-post-steps li { margin: 6px 0; }
+.review-post-steps > p:last-child { color: var(--ink-faint); font-size: 11px; }
+@media (max-width: 480px) { .landing-logo .revqr-brand-logo { width: 112px; } #screen-review .action-row { flex-direction: column; } }
 /* Named layout hooks mirror the former inline desktop layout. */
 .landing-hero-actions,
 .admin-page-heading,

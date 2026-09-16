@@ -9,7 +9,7 @@
     <main class="ticket auth-ticket">
       <div class="ticket-head">
         <p class="eyebrow">{{ 'Account Recovery' if is_recovery else 'Email Verification' }}</p>
-        <h1 class="biz-name auth-brand">revQR</h1>
+        <h1 class="biz-name auth-brand" style="display:flex; justify-content:center;">{% include "components/revqr_logo.html" %}</h1>
         <p class="meta-line">ENTER THE 6-DIGIT SECURITY CODE</p>
       </div>
       <div class="perf"></div>

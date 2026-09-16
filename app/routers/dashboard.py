@@ -1,5 +1,6 @@
 import uuid
 import io
+import json
 from datetime import datetime, time, timedelta, timezone
 from typing import Optional
 from urllib.parse import quote
@@ -17,6 +18,7 @@ from app.database import get_db
 from app.models import Business, BusinessAsset, Scan, Review, Feedback, Payment
 from app.services.auth import get_current_business, verify_password
 from app.services.assets import LogoValidationError, normalize_logo
+from app.services.business_context import import_business_context
 from app.services.plans import public_plans
 from app.config import settings
 from app.main import TEMPLATES_DIR
@@ -292,8 +294,14 @@ async def dashboard_settings(
     request: Request,
     business: Business = Depends(get_current_business)
 ):
+    try:
+        context = json.loads(business.scraped_context or "{}")
+        context_status = context.get("status") if isinstance(context, dict) and context.get("version") == 1 else None
+    except ValueError:
+        context_status = None
     return templates.TemplateResponse(request, "dashboard/settings.html", {
         "business": business,
+        "context_status": context_status,
     })
 
 # ── Security Settings (2FA) ──────────────────────────────────────────────────
@@ -399,6 +407,7 @@ async def dashboard_settings_post(
     custom_prompt: str = Form(""),
     logo: UploadFile = File(None),
     remove_logo: bool = Form(False),
+    refresh_business_context: bool = Form(False),
     business: Business = Depends(get_current_business),
     db: AsyncSession = Depends(get_db)
 ):
@@ -425,11 +434,14 @@ async def dashboard_settings_post(
     if not __import__("re").fullmatch(r"#[0-9A-Fa-f]{6}", brand_color):
         brand_color = "#6366f1"
 
+    refresh_context = refresh_business_context or business.google_place_id != review_link or business.name != name[:255] or not business.scraped_context
     business.name = name[:255]
     business.brand_color = brand_color
     business.google_place_id = review_link
     business.phone = phone.strip()[:20] or None
     business.custom_prompt = custom_prompt.strip()[:2000] or None
+    if refresh_context:
+        business.scraped_context = await import_business_context(review_link, business.name)
 
     asset_result = await db.execute(
         select(BusinessAsset).where(

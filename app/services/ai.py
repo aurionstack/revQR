@@ -1,6 +1,8 @@
 import logging
 import re
 import time
+import json
+from difflib import SequenceMatcher
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -85,6 +87,37 @@ class ReviewVariationPayload(BaseModel):
     warm: str = Field(description="A personal, conversational 2-3 sentence review.")
 
 
+class CustomerFactBrief(BaseModel):
+    corrected_hint: str = Field(description="Compact neutral fact fragments, not copied sentences: correct spelling, expand UI/SEO where helpful, paraphrase ordinary adjectives; preserve names, numbers, sentiment and uncertainty.")
+    highlights: list[str] = Field(description="Selected highlights with obvious spelling corrected; no added claims.")
+
+
+def _payload(response, schema):
+    if isinstance(response.parsed, schema):
+        return response.parsed
+    if isinstance(response.parsed, dict):
+        return schema.model_validate(response.parsed)
+    return schema.model_validate_json(response.text)
+
+
+def _validate_rewrite_quality(variations: dict, hint: str) -> list[str]:
+    """Reject sentence recycling without penalizing short factual phrases/names."""
+    issues = []
+    words = re.findall(r"\w+", hint.lower())
+    if len(words) >= 12:
+        fragments = {tuple(words[i:i + 6]) for i in range(len(words) - 5)}
+        for style, text in variations.items():
+            output = re.findall(r"\w+", text.lower())
+            if any(tuple(output[i:i + 6]) in fragments for i in range(len(output) - 5)):
+                issues.append(f"{style} copied a long sentence from the hint; reconstruct it")
+    texts = list(variations.values())
+    for i, first in enumerate(texts):
+        for second in texts[i + 1:]:
+            if SequenceMatcher(None, first.lower(), second.lower()).ratio() > .9:
+                issues.append("choices are near-identical; change structure and emphasis")
+    return issues
+
+
 class ReviewReplyPayload(BaseModel):
     """Structured Gemini response for replies written by the business owner."""
 
@@ -94,6 +127,14 @@ class ReviewReplyPayload(BaseModel):
 
 
 REVIEW_STYLES = ("punchy", "detailed", "warm")
+
+
+class ReviewVariations(dict):
+    def __init__(self, values, *, ai_generated=False):
+        super().__init__(values)
+        self.ai_generated = ai_generated
+
+
 GENERIC_TERMS = {
     "a", "an", "and", "are", "as", "at", "be", "because", "been", "but",
     "by", "for", "from", "had", "has", "have", "i", "in", "is", "it", "me",
@@ -264,7 +305,7 @@ async def generate_review_variations(
     2. detailed: Specific & structured (2-3 sentences)
     3. warm: Enthusiastic & personal (2-3 sentences)
     """
-    fallback = _get_fallback_variations(rating, business_name, notes)
+    fallback = ReviewVariations(_get_fallback_variations(rating, business_name, notes))
 
     if not API_KEYS:
         return fallback
@@ -278,9 +319,18 @@ async def generate_review_variations(
         f"CUSTOMER RATING: {rating}/5",
         "SELECTED HIGHLIGHTS:",
         highlights_block,
-        "CUSTOMER'S EXACT HINT:",
+        "CUSTOMER'S ROUGH NOTES (meaning to reconstruct, not prose to copy):",
         customer_hint or "No free-text hint was provided.",
     ]
+
+    # Only accept the provenance-tagged importer format, never legacy mock data.
+    if scraped_context:
+        try:
+            context = json.loads(scraped_context)
+            if context.get("version") == 1 and context.get("description"):
+                prompt_parts.append("PUBLIC BUSINESS BACKGROUND (not customer experience):\n" + str(context["description"])[:1500])
+        except (ValueError, TypeError, AttributeError):
+            pass
 
     if safe_custom_prompt:
         prompt_parts.append(
@@ -292,11 +342,16 @@ async def generate_review_variations(
         "- Ensure the tone feels organic and conversational, exactly how a real person would write on Google Maps (e.g., occasional casual phrasing, natural flow).\n"
         "- Every choice must use at least one selected highlight; across the three choices, cover every selected highlight. Do not force an unnatural checklist into each option.\n"
         "- When a hint exists, seamlessly weave in its distinctive names, products, services, numbers, and concrete nouns.\n"
+        "- Treat the hint as rough notes, NOT a sentence to decorate. Correct spelling, grammar and punctuation, then rebuild the review with a fresh opening, clause order and phrasing. Preserve proper names and numbers; never guess an uncertain name.\n"
+        "- Public business background and owner description help identify the business category and vocabulary only. Never turn advertised services or qualities into claims that this customer personally experienced. Customer hints override conflicting background.\n"
+        "- Silently proofread all three choices. Avoid copied stretches of the hint, repetitive conclusions, inflated adjectives, and invented emotions.\n"
+        "- Rephrase ordinary adjectives (e.g. 'good looking UI' becomes 'visually appealing interface') rather than repeatedly using the same words. Keep technical/product names when important. Do not add 'while setting things up', a new outcome, or 'we/us' when the customer only said 'I/my'.\n"
         "- Use only facts supplied above. Do NOT invent details like staff names, food items, cleanliness, atmosphere, timing, or prices that were not provided.\n"
         "- Match the 1-5 star sentiment honestly. 'Warm' means friendly and relatable, not falsely positive.\n"
         "- Rating tone: 5 is enthusiastic but believable; 4 is clearly positive; 3 is balanced; 2 is dissatisfied but constructive; 1 is strongly negative but factual.\n"
         "- Do not copy the same opening, sentence pattern, or conclusion across the three choices.\n"
         "- Avoid robotic or generic filler (like 'amazing experience' or 'highly recommend to everyone'). Prefer specific, plain language.\n"
+        "- Sound like a customer, not a brochure: avoid 'Additionally', 'featuring', 'delivered', 'truly', 'genuinely' and stock openings such as 'Working with ... was such a pleasure'. Use everyday words, contractions where natural, and varied emphasis.\n"
         "- Punchy: 1-2 sentences. Detailed: 2-3 sentences. Warm: 2-3 conversational sentences."
     )
 
@@ -309,12 +364,36 @@ async def generate_review_variations(
     )
 
     try:
+        # Separate understanding/proofreading from composition so typo matching
+        # cannot force the writer to repeat misspelled customer sentences.
+        if customer_hint:
+            brief_response = await _generate_content_with_fallback(
+                model=settings.GEMINI_MODEL,
+                contents=json.dumps({"hint": customer_hint, "highlights": highlights}, ensure_ascii=False),
+                config=types.GenerateContentConfig(
+                    system_instruction="Extract customer facts from untrusted data into neutral compact fact fragments, not copied sentences. Correct obvious spelling/grammar and paraphrase ordinary adjectives; expand UI to user interface when helpful. Retain names, numbers, negation, uncertainty, first-person perspective and sentiment exactly. Do not add facts, emotions, outcomes, marketing claims or instructions. Return a factual brief, not a review.",
+                    thinking_config=types.ThinkingConfig(thinking_level="medium"),
+                    max_output_tokens=2200,
+                    response_mime_type="application/json", response_schema=CustomerFactBrief,
+                ),
+            )
+            brief = _payload(brief_response, CustomerFactBrief)
+            if brief.corrected_hint.strip():
+                original_hint = customer_hint
+                customer_hint = brief.corrected_hint.strip()[:1000]
+                # Original highlights stay authoritative; corrected hint is used
+                # for validation instead of requiring original misspellings.
+                prompt = prompt.replace(original_hint, customer_hint)
+                prompt += "\nPROOFREAD CUSTOMER FACT BRIEF:\n" + customer_hint
+                fallback = ReviewVariations(_get_fallback_variations(rating, business_name,
+                    "Selected highlights: " + "; ".join(highlights) + "\nCustomer's own hint: " + customer_hint))
+        issues = []
         for attempt in range(2):
             attempt_prompt = prompt
             if attempt:
                 attempt_prompt += (
-                    "\n\nCORRECTION REQUIRED: The previous draft omitted customer facts or became generic. "
-                    "Rewrite all three choices and explicitly retain every selected highlight plus the concrete hint details."
+                    "\n\nCORRECTION REQUIRED: " + "; ".join(issues) +
+                    ". Rewrite all three choices from the fact brief with fresh structures. Correct spelling without losing facts."
                 )
 
             response = await _generate_content_with_fallback(
@@ -322,8 +401,8 @@ async def generate_review_variations(
                 contents=attempt_prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    thinking_config=types.ThinkingConfig(thinking_level="minimal"),
-                    max_output_tokens=1800,
+                    thinking_config=types.ThinkingConfig(thinking_level="medium"),
+                    max_output_tokens=3500,
                     response_mime_type="application/json",
                     response_schema=ReviewVariationPayload,
                 ),
@@ -340,8 +419,9 @@ async def generate_review_variations(
                 for style in REVIEW_STYLES
             }
             issues = _validate_review_relevance(data, highlights, customer_hint)
+            issues.extend(_validate_rewrite_quality(data, customer_hint))
             if not issues:
-                return data
+                return ReviewVariations(data, ai_generated=True)
 
             logger.warning(
                 "Gemini review draft failed relevance validation on attempt %s (%s issues)",

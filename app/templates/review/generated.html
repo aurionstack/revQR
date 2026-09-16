@@ -6,6 +6,9 @@
   <input type="hidden" id="variations-data" value='{{ variations_json }}' />
 
   <h2 class="q">Pick your review style</h2>
+  {% if ai_generated is defined and not ai_generated %}
+  <p class="hint" role="status">AI rewriting is temporarily unavailable. This is a basic draft from your notes — please proofread and edit it before posting.</p>
+  {% endif %}
 
   <!-- Variation Tabs -->
   <div class="variation-tabs">
@@ -24,7 +27,7 @@
     <textarea
       id="reviewText"
       rows="5"
-      data-typewriter="true"
+      data-typewriter="false"
       data-text="{{ variations.punchy }}"
     >{{ variations.punchy }}</textarea>
   </div>
@@ -42,10 +45,19 @@
       data-google-url="{{ google_review_url or '' }}"
       onclick="postOnGoogle(this.dataset.googleUrl)"
     >
-      Post on Google
+      Copy &amp; Review on Google
     </button>
   </div>
   <span class="copied-tag" id="copiedTag">✓ Copied</span>
+  <div class="review-post-steps" aria-label="How to post your review">
+    <p><b>Three quick steps</b></p>
+    <ol>
+      <li>Check your draft and edit anything that doesn't match your visit.</li>
+      <li>Tap <b>Copy &amp; Review on Google</b> — your review is copied automatically.</li>
+      <li>Sign in to Google, choose your stars, paste the text and tap <b>Post</b>.</li>
+    </ol>
+    <p>Only you can publish your review. We never post it for you.</p>
+  </div>
 
   <div class="private-link-row">
     <button

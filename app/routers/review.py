@@ -16,6 +16,7 @@ from app.models import Business, Scan, Review, Feedback
 from app.services.rate_limit import limiter
 from app.services.time import format_local_datetime
 from app.services.ai import generate_review_variations
+from app.services.business_context import import_business_context
 from app.services.google_reviews import GoogleReviewLinkError, google_review_destination
 from app.config import settings
 from app.main import TEMPLATES_DIR
@@ -170,15 +171,21 @@ async def generate_review_text(
         prompt_details.append("Customer's own hint: " + customer_hint)
     full_notes = "\n".join(prompt_details)
 
+    # Backfill existing accounts once, ignoring the old unverified mock format.
+    try:
+        context_record = json.loads(business.scraped_context or "{}")
+    except ValueError:
+        context_record = {}
+    if not isinstance(context_record, dict) or context_record.get("version") != 1:
+        business.scraped_context = await import_business_context(business.google_place_id, business.name)
+
     # Generate 3 review variations using AI
     variations = await generate_review_variations(
         rating=rating, 
         notes=full_notes,
         business_name=business.name,
         custom_prompt=business.custom_prompt,
-        # The former review "scraper" supplied hard-coded restaurant examples
-        # for every business. Do not let that stale mock data influence drafts.
-        scraped_context=None
+        scraped_context=business.scraped_context
     )
     
     # Save Review to DB (primary = detailed version)
@@ -206,6 +213,7 @@ async def generate_review_text(
         "review_id": str(new_review.id),
         "generated_text": primary_text,
         "variations": variations,
+        "ai_generated": getattr(variations, "ai_generated", True),
         "variations_json": json.dumps(variations),
         "google_review_url": google_review_url,
         "slug": business.slug,

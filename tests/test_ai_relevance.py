@@ -71,6 +71,29 @@ def test_fallback_does_not_invent_details_when_customer_supplies_none():
         assert not invented_terms.intersection(review.lower().split())
 
 
+def test_rewrite_check_rejects_decorated_original_sentence():
+    hint = "the website had a really good looking design and the search optimization was very helpful for my business"
+    variations = {style: hint + " and I loved it." for style in ai.REVIEW_STYLES}
+    assert ai._validate_rewrite_quality(variations, hint)
+
+
+@pytest.mark.asyncio
+async def test_writer_uses_corrected_fact_brief_and_background(monkeypatch):
+    monkeypatch.setattr(ai,"API_KEYS",["test-key"])
+    calls=[]
+    outputs=[ai.CustomerFactBrief(corrected_hint="The website design was attractive and SEO was helpful.",highlights=[]),
+        ai.ReviewVariationPayload(punchy="An attractive website design and helpful SEO made a real difference for me.",detailed="The website design was attractive and easy to appreciate. I found the SEO work helpful for my business.",warm="What stood out was the attractive design of my website. The SEO support was helpful too, which I really appreciated.")]
+    async def fake(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(parsed=outputs.pop(0))
+    monkeypatch.setattr(ai,"_generate_content_with_fallback",fake)
+    result=await ai.generate_review_variations(5,"Customer's own hint: websiet desgin was atractive and seo helpfull","Studio",scraped_context='{"version":1,"description":"Website design studio"}')
+    assert result.ai_generated
+    assert len(calls)==2
+    assert "PROOFREAD CUSTOMER FACT BRIEF" in calls[1]["contents"]
+    assert "Website design studio" in calls[1]["contents"]
+
+
 def test_key_order_rotates_and_skips_cooled_down_key(monkeypatch):
     monkeypatch.setattr(ai, "API_KEYS", ["first", "second", "third"])
     monkeypatch.setattr(ai, "_key_cursor", 0)
