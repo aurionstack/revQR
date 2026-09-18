@@ -39,11 +39,11 @@ def _send_smtp_sync(to_email: str, subject: str, html_content: str, text_content
 
         context = ssl.create_default_context()
         if settings.SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=context) as server:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=context, timeout=15) as server:
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
                 server.sendmail(settings.SMTP_FROM_EMAIL, to_email, msg.as_string())
         else:
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
                 if settings.SMTP_TLS:
                     server.starttls(context=context)
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)

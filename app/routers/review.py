@@ -15,7 +15,8 @@ from app.database import get_db
 from app.models import Business, Scan, Review, Feedback
 from app.services.rate_limit import limiter
 from app.services.time import format_local_datetime
-from app.services.ai import generate_review_variations
+from app.services.ai import generate_review_variations, ReviewVariations, _get_fallback_variations
+from app.services.usage import reserve_business_generation
 from app.services.business_context import import_business_context
 from app.services.google_reviews import GoogleReviewLinkError, google_review_destination
 from app.config import settings
@@ -180,13 +181,14 @@ async def generate_review_text(
         business.scraped_context = await import_business_context(business.google_place_id, business.name)
 
     # Generate 3 review variations using AI
+    quota_available = await reserve_business_generation(db, business.id, scan_uuid)
     variations = await generate_review_variations(
         rating=rating, 
         notes=full_notes,
         business_name=business.name,
         custom_prompt=business.custom_prompt,
         scraped_context=business.scraped_context
-    )
+    ) if quota_available else ReviewVariations(_get_fallback_variations(rating, business.name, full_notes))
     
     # Save Review to DB (primary = detailed version)
     primary_text = variations.get("detailed", variations.get("punchy", ""))
@@ -214,6 +216,7 @@ async def generate_review_text(
         "generated_text": primary_text,
         "variations": variations,
         "ai_generated": getattr(variations, "ai_generated", True),
+        "quota_exhausted": not quota_available,
         "variations_json": json.dumps(variations),
         "google_review_url": google_review_url,
         "slug": business.slug,

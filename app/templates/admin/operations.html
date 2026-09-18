@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Launch operations — RevQR{% endblock %}
+{% block body_class %}page-full{% endblock %}
+{% block content %}
+<main class="container-wide" style="padding-top:28px;padding-bottom:40px;">
+  <a href="/admin" class="btn btn-secondary btn-inline btn-sm">← Clients</a><h1 class="dash-title" style="margin:24px 0;">Launch operations</h1>
+  <section class="source-attribution"><h2>Configuration checks</h2>{% for label,ready in checks.items() %}<p style="margin:12px 0;">{{ '✓' if ready else '○' }} {{ label }}</p>{% endfor %}<p class="hint">These are configuration checks, not proof of a working webhook, inbox, backups or legal compliance. Complete the launch runbook before opening checkout.</p></section>
+  <p style="margin:20px 0;">Notification queue: {{ unsent }} unsent · {{ failed }} need operator attention.</p>
+  <div class="operations-grid">
+    <section class="source-attribution"><h2>Refund/dispute reviews</h2>{% for order in reviews %}<article class="billing-card"><p>{{ order.razorpay_order_id }} · {{ order.status }}</p><a href="/admin/clients/{{ order.business_id }}/edit">Review client entitlement</a><form method="post" action="/admin/operations/{{ order.id }}/resolve"><label><input type="checkbox" name="confirmed" value="true" required /> I reviewed the provider case and adjusted only the affected paid access where appropriate.</label><button class="btn btn-secondary btn-sm" type="submit">Resolve review flag</button></form></article>{% else %}<p>No open billing reviews.</p>{% endfor %}</section>
+    <section class="source-attribution"><h2>Recent webhook receipts</h2>{% for event in events %}<p style="margin:12px 0;">{{ event.event_type }} · {{ event.status }}<br /><span class="hint">{{ event.received_at | local_time('%d %b %H:%M') }}</span></p>{% else %}<p>No webhook receipts yet.</p>{% endfor %}</section>
+    <section class="source-attribution"><h2>Audit trail</h2>{% for log in logs %}<p style="margin:12px 0;overflow-wrap:anywhere;">{{ log.action }}<br /><span class="hint">{{ log.target or '' }} · {{ log.created_at | local_time('%d %b %H:%M') }}</span></p>{% else %}<p>No audit entries yet.</p>{% endfor %}</section>
+  </div>
+</main>
+{% endblock %}

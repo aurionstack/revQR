@@ -8,19 +8,65 @@ import hmac
 import hashlib
 import json
 import re
+import asyncio
+import logging
+import requests
 from datetime import datetime, timezone
 
 import razorpay
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 
 from app.config import settings
-from app.models import Payment, Business
+from app.models import Payment, Business, WebhookEvent
+from app.services.operations import queue_notification, audit
 from app.services.plans import add_months, get_plan
 
 
 # Initialize Razorpay client
-client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+class ProviderSession(requests.Session):
+    def request(self, *args, **kwargs):
+        kwargs.setdefault("timeout", (5, 15))
+        return super().request(*args, **kwargs)
+
+
+client = razorpay.Client(session=ProviderSession(), auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+logger = logging.getLogger(__name__)
+
+
+class RetryableWebhookError(RuntimeError):
+    pass
+
+
+async def reconcile_order(order_id: str, db: AsyncSession, business_id=None):
+    entities = await asyncio.to_thread(client.order.payments, order_id)
+    query = select(Payment).where(Payment.razorpay_order_id == order_id)
+    if business_id:
+        query = query.where(Payment.business_id == business_id)
+    payment = (await db.execute(query.with_for_update())).scalar_one_or_none()
+    if not payment:
+        return False
+    items = entities.get("items", [])
+    for candidate in items:
+        if not _matches(payment, candidate):
+            continue
+        entity = await asyncio.to_thread(client.payment.fetch, candidate["id"])
+        if not _matches(payment, entity):
+            continue
+        refunded=int(entity.get("amount_refunded") or 0)
+        if refunded:
+            if not 0 <= refunded <= payment.amount:
+                continue
+            payment.refunded_amount=max(payment.refunded_amount,refunded)
+            payment.status="refunded" if refunded==payment.amount else "partially_refunded"
+            payment.billing_review_required=True
+            await audit(db,None,"billing.reconciliation_review",str(payment.id))
+        elif entity.get("status")=="captured" and not payment.billing_review_required:
+            await _activate(payment,entity,db)
+    payment.last_checked_at=datetime.now(timezone.utc)
+    await db.commit()
+    return payment.entitlement_applied
 
 
 class PaymentConfigurationError(RuntimeError):
@@ -59,6 +105,8 @@ async def create_order(
     """
     if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
         raise PaymentConfigurationError("Online payments are temporarily unavailable.")
+    if not settings.PUBLIC_CHECKOUT_ENABLED or not settings.POLICIES_APPROVED or not settings.RAZORPAY_WEBHOOK_SECRET:
+        raise PaymentConfigurationError("Checkout is not open yet. Please contact support.")
 
     if purpose == "subscription":
         plan = get_plan(plan_code)
@@ -69,6 +117,8 @@ async def create_order(
         shipping_values = {}
         description = f"revQR {plan['name']} subscription"
     elif purpose == "physical_stand":
+        if not settings.PHYSICAL_STANDS_ENABLED or not settings.SHIPPING_ESTIMATE:
+            raise PaymentConfigurationError("Physical stand ordering is not open yet.")
         if quantity < 1 or quantity > 20:
             raise ValueError("Physical stand quantity must be between 1 and 20.")
         amount = settings.PHYSICAL_STAND_PRICE_PAISE * quantity
@@ -95,7 +145,10 @@ async def create_order(
             "quantity": str(quantity),
         },
     }
-    razorpay_order = client.order.create(data=order_data)
+    razorpay_order = await asyncio.to_thread(client.order.create, data=order_data)
+    if (razorpay_order.get("amount") != amount or razorpay_order.get("currency") != currency
+            or not razorpay_order.get("id")):
+        raise PaymentConfigurationError("Payment provider returned an unexpected order.")
 
     # Save to DB
     payment = Payment(
@@ -146,36 +199,55 @@ async def verify_payment(
     if not hmac.compare_digest(expected_signature, razorpay_signature):
         return False
 
-    # Update payment record
+    # Serialize callback and webhook processing for this order.
     query = select(Payment).where(Payment.razorpay_order_id == razorpay_order_id)
     if business_id is not None:
         owner_uuid = business_id if isinstance(business_id, uuid.UUID) else uuid.UUID(str(business_id))
         query = query.where(Payment.business_id == owner_uuid)
-    result = await db.execute(query)
+    result = await db.execute(query.with_for_update())
     payment = result.scalar_one_or_none()
 
     if not payment:
         return False
 
-    if payment.status == "paid":
-        return payment.razorpay_payment_id == razorpay_payment_id
-
-    payment.razorpay_payment_id = razorpay_payment_id
+    if payment.entitlement_applied:
+        return payment.status == "paid" and payment.razorpay_payment_id == razorpay_payment_id
+    entity = await asyncio.to_thread(client.payment.fetch, razorpay_payment_id)
+    order = await asyncio.to_thread(client.order.fetch, razorpay_order_id)
+    if (not _matches(payment, entity) or entity.get("status") != "captured"
+            or int(entity.get("amount_refunded") or 0) != 0
+            or order.get("id") != payment.razorpay_order_id
+            or order.get("amount") != payment.amount or order.get("currency") != payment.currency
+            or order.get("status") != "paid"):
+        return False
+    if not await _activate(payment, entity, db):
+        return False
     payment.razorpay_signature = razorpay_signature
+    await db.commit()
+    return True
+
+
+def _matches(payment: Payment, entity: dict) -> bool:
+    return (isinstance(entity, dict) and entity.get("order_id") == payment.razorpay_order_id
+            and entity.get("amount") == payment.amount and entity.get("currency") == payment.currency
+            and isinstance(entity.get("id"), str))
+
+
+async def _activate(payment: Payment, entity: dict, db: AsyncSession) -> bool:
+    if not _matches(payment, entity) or entity.get("status") != "captured":
+        return False
+    if payment.entitlement_applied:
+        return payment.razorpay_payment_id == entity["id"]
+    business = (await db.execute(select(Business).where(Business.id == payment.business_id).with_for_update())).scalar_one_or_none()
+    if not business or not _apply_paid_order(payment, business):
+        return False
+    payment.razorpay_payment_id = entity["id"]
     payment.status = "paid"
     payment.paid_at = datetime.now(timezone.utc)
-
-    biz_result = await db.execute(
-        select(Business).where(Business.id == payment.business_id)
-    )
-    business = biz_result.scalar_one_or_none()
-    if not business:
-        return False
-    if not _apply_paid_order(payment, business):
-        await db.rollback()
-        return False
-
-    await db.commit()
+    payment.entitlement_applied = True
+    await queue_notification(db, f"receipt:{payment.id}", business.email, "Your RevQR payment receipt",
+        f"Payment received: INR {payment.amount / 100:.2f}.\nOrder: {payment.razorpay_order_id}\nPayment: {entity['id']}\nPurchase: {payment.purpose}\nYour receipt and subscription details are in {settings.APP_URL}/dashboard/billing. This payment receipt is not a GST tax invoice.")
+    await audit(db, None, "payment.activated", str(payment.id))
     return True
 
 
@@ -199,49 +271,82 @@ def _apply_paid_order(payment: Payment, business: Business) -> bool:
     return False
 
 
-async def handle_webhook(raw_body: bytes, signature: str, db: AsyncSession) -> bool:
+async def handle_webhook(raw_body: bytes, signature: str, db: AsyncSession, event_id: str = "") -> bool:
     """
     Handle Razorpay webhook events (backup verification).
     Called by POST /billing/webhook.
     """
     # Verify webhook signature
-    webhook_secret = settings.RAZORPAY_WEBHOOK_SECRET or settings.RAZORPAY_KEY_SECRET
-    if not webhook_secret:
+    secrets = [secret for secret in (settings.RAZORPAY_WEBHOOK_SECRET, settings.RAZORPAY_WEBHOOK_PREVIOUS_SECRET) if secret]
+    if not secrets or not any(hmac.compare_digest(hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest(), signature) for secret in secrets):
         return False
     try:
-        client.utility.verify_webhook_signature(raw_body.decode("utf-8"), signature, webhook_secret)
         payload = json.loads(raw_body)
-    except (razorpay.errors.SignatureVerificationError, UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError):
         return False
-
+    if not isinstance(payload, dict):
+        return False
     event = payload.get("event", "")
-
-    if event == "payment.captured":
-        payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
-        order_id = payment_entity.get("order_id")
-        payment_id = payment_entity.get("id")
-
-        if order_id and payment_id:
-            result = await db.execute(
-                select(Payment).where(Payment.razorpay_order_id == order_id)
-            )
-            payment = result.scalar_one_or_none()
-
-            if payment and payment.status != "paid":
-                payment.razorpay_payment_id = payment_id
-                payment.status = "paid"
-                payment.paid_at = datetime.now(timezone.utc)
-
-                biz_result = await db.execute(
-                    select(Business).where(Business.id == payment.business_id)
-                )
-                business = biz_result.scalar_one_or_none()
-                if not business:
-                    return False
-                if not _apply_paid_order(payment, business):
-                    await db.rollback()
-                    return False
-
-                await db.commit()
-
-    return True
+    if not isinstance(event, str) or len(event) > 80:
+        return False
+    identity = event_id[:128] if event_id else hashlib.sha256(raw_body).hexdigest()
+    inserted = (await db.execute(insert(WebhookEvent).values(event_id=identity, event_type=event, status="received").on_conflict_do_nothing().returning(WebhookEvent.event_id))).scalar_one_or_none()
+    if not inserted:
+        return True
+    try:
+        handled = {"payment.captured", "order.paid", "payment.failed", "refund.processed", "payment.dispute.created", "payment.dispute.won", "payment.dispute.lost", "payment.dispute.closed"}
+        if event not in handled:
+            event_record = await db.get(WebhookEvent, identity)
+            event_record.status = "ignored"
+            await db.commit()
+            return True
+        data = payload.get("payload", {})
+        if not isinstance(data, dict):
+            raise RetryableWebhookError("Invalid provider payload")
+        kind = "refund" if event.startswith("refund.") else "dispute" if "dispute" in event else "payment"
+        entity = data.get(kind, {}).get("entity", {})
+        if not isinstance(entity, dict):
+            raise RetryableWebhookError("Invalid provider entity")
+        pid = entity.get("payment_id") if kind != "payment" else entity.get("id")
+        if not pid:
+            raise RetryableWebhookError("Missing payment identity")
+        authoritative = await asyncio.to_thread(client.payment.fetch, pid)
+        payment = (await db.execute(select(Payment).where(Payment.razorpay_order_id == authoritative.get("order_id")).with_for_update())).scalar_one_or_none()
+        if not payment:
+            # Order persistence may lag provider delivery. Roll back the event
+            # receipt so a retried delivery can process it later.
+            raise RetryableWebhookError("Order not yet available")
+        if not _matches(payment, authoritative):
+            raise RetryableWebhookError("Provider payment does not match order")
+        if event in {"payment.captured", "order.paid"}:
+            if authoritative.get("status") == "captured" and not authoritative.get("amount_refunded"):
+                if not await _activate(payment, authoritative, db):
+                    raise RetryableWebhookError("Activation unsuccessful")
+            elif authoritative.get("status") not in {"refunded", "captured"}:
+                raise RetryableWebhookError("Payment not captured")
+        elif event == "payment.failed" and not payment.entitlement_applied:
+            if authoritative.get("status") == "failed":
+                payment.status = "failed"
+        if event == "refund.processed" or authoritative.get("amount_refunded"):
+            refunded = int(authoritative.get("amount_refunded") or 0)
+            if not 0 < refunded <= payment.amount:
+                raise RetryableWebhookError("Invalid refund amount")
+            payment.refunded_amount = max(payment.refunded_amount, refunded)
+            payment.status = "refunded" if payment.refunded_amount == payment.amount else "partially_refunded"
+            payment.billing_review_required = True
+        if "dispute" in event:
+            payment.billing_review_required = True
+            if event == "payment.dispute.created":
+                payment.status = "disputed"
+        if payment.billing_review_required:
+            await audit(db, None, "billing.review_required", str(payment.id))
+            if settings.SUPPORT_EMAIL:
+                await queue_notification(db, f"billing-alert:{identity}", settings.SUPPORT_EMAIL, "RevQR payment needs review", f"Order {payment.razorpay_order_id} needs refund/dispute and entitlement review. Open {settings.APP_URL}/admin/operations.")
+        record = await db.get(WebhookEvent, identity)
+        record.status = "processed"
+        await db.commit()
+        return True
+    except Exception as exc:
+        await db.rollback()
+        logger.warning("Webhook processing failed (%s)", type(exc).__name__)
+        raise RetryableWebhookError("Webhook processing must be retried") from exc

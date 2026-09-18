@@ -10,6 +10,12 @@
 </div>
 
 <!-- Stat Cards -->
+<section class="source-attribution launch-checklist">
+  <h2 style="font-size:18px;">Your setup checklist</h2>
+  <p class="hint" style="margin-top:10px;">{{ '✓' if business.email_verified else '○' }} Email verified · {{ '✓' if business.google_place_id else '○' }} Google review link · {{ '✓' if business.custom_prompt else '○' }} Business description · {{ '✓' if business.has_active_subscription else '○' }} Paid access</p>
+  <a href="/dashboard/settings">Edit business details</a><a href="/dashboard/billing">Billing &amp; AI allowance</a><a href="/dashboard/settings/security">Secure your account</a>
+  <p class="hint">Test-scan your QR on another phone and confirm the destination is your exact business before printing. A logo is optional.</p>
+</section>
 <div class="stats-grid">
   <div class="stat-card">
     <div class="stat-label">Total Scans</div>

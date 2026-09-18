@@ -38,6 +38,21 @@ class Settings(BaseSettings):
     MAX_LOGO_BYTES: int = 2 * 1024 * 1024
     MAX_REQUEST_BYTES: int = 3 * 1024 * 1024
     MAX_WEBHOOK_BYTES: int = 256 * 1024
+    SUPPORT_EMAIL: str = "support@revqr.tech"
+    SUPPORT_PHONE: str = "+919322974288"
+    LEGAL_BUSINESS_NAME: str = "Aurion Stack"
+    BUSINESS_ADDRESS: str = "Mapusa, Goa 403510, India (service location)"
+    POLICIES_APPROVED: bool = False
+    SHIPPING_ESTIMATE: str = "Approximately 7 business days from order confirmation, subject to production and courier availability."
+    REFUND_POLICY: str = ""
+    PHYSICAL_STANDS_ENABLED: bool = False
+    RATE_LIMIT_STORAGE_URI: str = "memory://"
+    AI_MONTHLY_LIMIT: int = 1000
+    AI_DAILY_BUSINESS_LIMIT: int = 100
+    AI_SCAN_LIMIT: int = 5
+    AI_GLOBAL_DAILY_CALL_LIMIT: int = 3000
+    AI_GLOBAL_DAILY_TOKEN_BUDGET: int = 2_000_000
+    SENTRY_DSN: str = ""
 
     @property
     def cookie_secure(self) -> bool:
@@ -66,6 +81,8 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
+    RAZORPAY_WEBHOOK_PREVIOUS_SECRET: str = ""
+    PUBLIC_CHECKOUT_ENABLED: bool = False
     ANNUAL_PRICE_PAISE: int = 99900
     TWO_YEAR_PRICE_PAISE: int = 159900
     PHYSICAL_STAND_PRICE_PAISE: int = 24900

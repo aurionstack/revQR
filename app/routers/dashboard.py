@@ -29,10 +29,12 @@ from app.services.google_reviews import (
 )
 from app.services.rate_limit import limiter
 from app.services.time import app_timezone, as_local_datetime, format_local_datetime, local_now
+from app.services.usage import reserve_business_generation
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["local_time"] = format_local_datetime
+templates.env.globals["launch_config"] = settings
 
 @router.get("", response_class=HTMLResponse)
 async def dashboard_home(
@@ -189,10 +191,16 @@ async def dashboard_ai_reply(
     db: AsyncSession = Depends(get_db)
 ):
     """Generate AI reply options for a review and return partial HTML."""
-    res = await db.execute(select(Review).filter(Review.id == uuid.UUID(review_id), Review.business_id == business.id))
+    try:
+        review_uuid = uuid.UUID(review_id)
+    except ValueError:
+        return HTMLResponse("<p class='hint'>Invalid review.</p>", status_code=400)
+    res = await db.execute(select(Review).filter(Review.id == review_uuid, Review.business_id == business.id))
     review = res.scalar_one_or_none()
     if not review:
         return HTMLResponse("<p class='hint'>Review not found.</p>", status_code=404)
+    if not await reserve_business_generation(db, business.id):
+        return HTMLResponse("<p class='hint'>AI usage limit reached. You can still write a manual reply.</p>", status_code=429)
 
     replies = await generate_review_reply(
         rating=review.rating,

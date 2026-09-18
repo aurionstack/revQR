@@ -13,6 +13,8 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
+from app.services.monitoring import configure_monitoring
+configure_monitoring()
 from app.services.seo import (
     homepage_structured_data,
     public_page_structured_data,
@@ -89,6 +91,7 @@ app.mount("/media", StaticFiles(directory=str(MEDIA_DIR)), name="media")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 templates.env.filters["local_time"] = format_local_datetime
+templates.env.globals["launch_config"] = settings
 
 
 from slowapi import _rate_limit_exceeded_handler
@@ -281,6 +284,20 @@ async def health_check():
     return {"status": "ok", "version": "1.0.0"}
 
 
+@app.get("/health/ready", include_in_schema=False)
+async def readiness_check():
+    import asyncio
+    from sqlalchemy import text
+    from app.database import async_session_factory
+    try:
+        async with asyncio.timeout(3):
+            async with async_session_factory() as db:
+                await db.execute(text("SELECT 1 FROM payments LIMIT 1"))
+        return {"status":"ready"}
+    except Exception:
+        return JSONResponse({"status":"unavailable"}, status_code=503)
+
+
 # ── Routers (will be added as we build each phase) ───────────────────────
 
 # Phase 2:
@@ -308,3 +325,7 @@ app.include_router(assets.router)
 # Super Admin Portal (Client creation, cash unlocks, account controls)
 from app.routers import admin
 app.include_router(admin.router)
+
+from app.routers import public_info, launch
+app.include_router(public_info.router)
+app.include_router(launch.router)

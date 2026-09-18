@@ -32,6 +32,9 @@ async def create_order(
     except (json.JSONDecodeError, ValueError):
         payload = {}
 
+    if not isinstance(payload, dict):
+        return JSONResponse({"error": "Expected a JSON object."}, status_code=400)
+
     purpose = str(payload.get("purpose", "subscription"))
     plan_code = str(payload.get("plan_code", "annual"))
     try:
@@ -88,19 +91,19 @@ async def verify_payment(
     if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
         raise HTTPException(status_code=400, detail="Missing payment details")
 
-    verified = await razorpay_service.verify_payment(
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        db,
-        business_id=business.id,
-    )
+    try:
+        verified = await razorpay_service.verify_payment(
+            razorpay_order_id, razorpay_payment_id, razorpay_signature, db, business_id=business.id)
+    except Exception:
+        await db.rollback()
+        return RedirectResponse("/dashboard/billing?verification=pending", status_code=303)
 
     if verified:
         # Also mark the business object in this request as paid so it's fresh if needed
         return RedirectResponse("/dashboard/qr?payment=success", status_code=303)
     else:
-        raise HTTPException(status_code=400, detail="Payment verification failed")
+        await db.rollback()
+        return RedirectResponse("/dashboard/billing?verification=pending", status_code=303)
 
 
 @router.post("/billing/webhook")
@@ -117,7 +120,11 @@ async def razorpay_webhook(
     if len(body) > settings.MAX_WEBHOOK_BYTES:
         raise HTTPException(status_code=413, detail="Webhook payload is too large")
 
-    success = await razorpay_service.handle_webhook(body, signature, db)
+    try:
+        success = await razorpay_service.handle_webhook(body, signature, db,
+            event_id=request.headers.get("X-Razorpay-Event-Id", ""))
+    except razorpay_service.RetryableWebhookError:
+        raise HTTPException(status_code=503, detail="Webhook processing pending; please retry")
 
     if success:
         return {"status": "ok"}

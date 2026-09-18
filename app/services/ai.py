@@ -7,6 +7,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 from app.config import settings
+from app.services.usage import reserve_provider_budget
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,8 @@ async def _generate_content_with_fallback(model, contents, config):
     last_error: Exception | None = None
     for key_index in _candidate_key_indexes():
         key = API_KEYS[key_index]
+        if not await reserve_provider_budget(contents, config):
+            raise RuntimeError("Daily AI budget exhausted")
         try:
             client = genai.Client(api_key=key)
             response = await client.aio.models.generate_content(

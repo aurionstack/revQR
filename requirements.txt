@@ -18,3 +18,5 @@ tzdata>=2026.1
 slowapi
 razorpay
 pyotp
+redis>=5,<8
+sentry-sdk[fastapi]>=2,<3

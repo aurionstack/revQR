@@ -50,6 +50,7 @@
 
   <!-- Main Content -->
   <main class="dash-main">
+    <p style="margin-bottom:18px;"><a href="/admin/operations" class="btn btn-secondary btn-inline btn-sm">Launch operations &amp; billing reviews →</a></p>
     <div class="admin-page-heading">
       <div>
         <h1 class="dash-title">Client Management</h1>
@@ -251,6 +252,8 @@
               <option value="{{ value }}" {{ 'selected' if order.fulfillment_status == value else '' }}>{{ value | title }}</option>
               {% endfor %}
             </select>
+            <input class="form-input" type="text" name="tracking_number" maxlength="100" value="{{ order.tracking_number or '' }}" placeholder="Tracking number (required when shipped)" aria-label="Tracking number" />
+            <input class="form-input" type="url" name="tracking_url" maxlength="500" value="{{ order.tracking_url or '' }}" placeholder="https://courier.example/track/..." aria-label="Courier tracking URL" />
             <button class="btn btn-secondary btn-sm" type="submit">Update</button>
           </form>
         </article>

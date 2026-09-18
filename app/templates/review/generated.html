@@ -6,7 +6,9 @@
   <input type="hidden" id="variations-data" value='{{ variations_json }}' />
 
   <h2 class="q">Pick your review style</h2>
-  {% if ai_generated is defined and not ai_generated %}
+  {% if quota_exhausted is defined and quota_exhausted %}
+  <p class="hint" role="status">AI drafting has reached its usage limit. You can still edit this basic draft, copy it and post your honest review on Google.</p>
+  {% elif ai_generated is defined and not ai_generated %}
   <p class="hint" role="status">AI rewriting is temporarily unavailable. This is a basic draft from your notes — please proofread and edit it before posting.</p>
   {% endif %}
 

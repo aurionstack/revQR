@@ -17,6 +17,9 @@ def prevent_live_metadata_requests(monkeypatch):
         return '{"version":1,"description":null,"status":"unavailable"}'
     for module in ("app.routers.auth", "app.routers.dashboard", "app.routers.admin", "app.routers.review"):
         monkeypatch.setattr(module + ".import_business_context", unavailable)
+    async def allow_budget(*args):
+        return True
+    monkeypatch.setattr("app.services.ai.reserve_provider_budget", allow_budget)
 
 @pytest.fixture(scope="function", autouse=True)
 async def setup_test_db(request):

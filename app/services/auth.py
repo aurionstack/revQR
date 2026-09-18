@@ -344,7 +344,9 @@ async def get_current_business_optional(
         return None
 
 async def get_current_admin(
-    business: Business = Depends(get_current_business)
+    request: Request,
+    business: Business = Depends(get_current_business),
+    db: AsyncSession = Depends(get_db),
 ) -> Business:
     """
     Dependency to ensure the current authenticated user has admin privileges.
@@ -360,4 +362,8 @@ async def get_current_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Super admin requires verified email and two-factor authentication.",
         )
+    if request.method in {"POST", "PUT", "DELETE", "PATCH"}:
+        from app.services.operations import audit
+        await audit(db, business.id, "admin.action_attempt", request.url.path)
+        await db.commit()
     return business

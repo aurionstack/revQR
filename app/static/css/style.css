@@ -2289,6 +2289,15 @@ textarea::placeholder {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .revqr-brand-logo { display: block; width: 140px; height: auto; max-width: 100%; }
+.policy-page { max-width: 860px; margin: auto; text-align: left; }
+.policy-page h2 { margin: 28px 0 12px; font-size: 23px; }
+.policy-page p { line-height: 1.75; margin: 14px 0; overflow-wrap: anywhere; }
+.launch-checklist { padding: 18px; margin-bottom: 24px; }
+.launch-checklist a { display: inline-block; margin: 6px 12px 6px 0; }
+.billing-cards { display: grid; gap: 14px; }
+.billing-card { padding: 20px; overflow-wrap: anywhere; }
+.billing-card p { margin: 8px 0; line-height: 1.6; }
+.operations-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); }
 .review-post-steps { padding: 16px; margin-top: 18px; border: 1px dashed var(--line); border-radius: 12px; background: var(--paper-deep); font-size: 12px; line-height: 1.6; }
 .review-post-steps ol { padding-left: 18px; margin: 10px 0; }
 .review-post-steps li { margin: 6px 0; }

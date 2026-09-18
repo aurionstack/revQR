@@ -25,6 +25,8 @@ from app.services.plans import add_months
 from app.services.google_reviews import GoogleReviewLinkError, normalize_google_review_link
 from app.services.time import format_local_datetime
 from app.services.business_context import import_business_context
+from app.services.operations import queue_notification, audit
+from urllib.parse import urlparse
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
@@ -476,6 +478,8 @@ async def delete_client(
 async def update_stand_order_status(
     order_id: uuid.UUID,
     fulfillment_status: Annotated[str, Form()],
+    tracking_number: Annotated[str, Form()] = "",
+    tracking_url: Annotated[str, Form()] = "",
     admin: Business = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -490,7 +494,20 @@ async def update_stand_order_status(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Stand order not found")
+    tracking_url=tracking_url.strip()
+    parsed=urlparse(tracking_url)
+    if tracking_url and (parsed.scheme!="https" or not parsed.hostname or parsed.username or parsed.password):
+        raise HTTPException(400,"Tracking URL must be a complete HTTPS courier URL")
+    if fulfillment_status == "shipped" and not tracking_number.strip():
+        raise HTTPException(400,"Enter a tracking number before marking an order shipped")
     order.fulfillment_status = fulfillment_status
+    order.tracking_number=tracking_number.strip()[:100] or None
+    order.tracking_url=tracking_url[:500] or None
+    business=await db.get(Business,order.business_id)
+    if business:
+        await queue_notification(db, f"stand:{order.id}:{fulfillment_status}:{order.tracking_number or ''}",business.email,
+            "Your RevQR stand order update", f"Order {order.razorpay_order_id}: {fulfillment_status}.\nTracking: {order.tracking_number or 'Not yet assigned'}\n{order.tracking_url or ''}\nDetails: {settings.APP_URL}/dashboard/billing")
+    await audit(db,admin.id,"stand.status_updated",str(order.id))
     db.add(order)
     await db.commit()
     return RedirectResponse(url="/admin#stand-orders", status_code=status.HTTP_302_FOUND)

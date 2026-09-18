@@ -1,0 +1,27 @@
+{% extends "dashboard/dash_base.html" %}
+{% block title %}Billing & receipts — RevQR{% endblock %}
+{% block dash_content %}
+<div class="dash-header"><h1 class="dash-title">Billing &amp; receipts</h1><p class="dash-subtitle">Subscription, AI allowance and purchase history</p></div>
+{% if pending %}<p class="security-alert" role="status">Your payment is being checked. Do not pay again yet. Use “Check payment” below; captured payments are also activated by webhook.</p>{% endif %}
+<section class="source-attribution billing-card">
+  <p><b>Paid access:</b> {{ 'Active' if business.has_active_subscription else 'Not active' }}</p>
+  <p><b>Expiry:</b> {{ business.subscription_expires_at | local_time('%d %b %Y') if business.subscription_expires_at else 'No dated subscription' }}</p>
+  <p><b>AI requests this month:</b> {{ ai_used }} / {{ config.AI_MONTHLY_LIMIT }} (UTC calendar month). Daily limit {{ config.AI_DAILY_BUSINESS_LIMIT }}; owner replies share the allowance.</p>
+  <p>Renewals are manual. Any new paid term is added after your existing unexpired term.</p>
+  <a href="/dashboard/qr" class="btn btn-secondary btn-inline btn-sm">Plans &amp; renewal</a>
+</section>
+<div class="billing-cards" style="margin-top:24px;">
+{% for order in orders %}
+<article class="source-attribution billing-card">
+  <h2>{{ 'Physical QR stand' if order.purpose == 'physical_stand' else 'Subscription · ' + (order.plan_code or '') | replace('_',' ') }}</h2>
+  <p><b>INR {{ '%.2f' | format(order.amount / 100) }}</b> · {{ order.status | replace('_',' ') | title }} · {{ order.created_at | local_time('%d %b %Y') }}</p>
+  <p>Order {{ order.razorpay_order_id }}{% if order.razorpay_payment_id %}<br />Payment {{ order.razorpay_payment_id }}{% endif %}</p>
+  {% if order.refunded_amount %}<p>Refunded: INR {{ '%.2f' | format(order.refunded_amount / 100) }}</p>{% endif %}
+  {% if order.billing_review_required %}<p class="hint">This purchase is under refund/dispute review. Contact support for its entitlement status.</p>{% endif %}
+  {% if order.purpose == 'physical_stand' %}<p>{{ order.quantity }} item(s) · {{ (order.fulfillment_status or 'awaiting payment') | title }}</p>{% if order.tracking_number %}<p>Tracking: {{ order.tracking_number }}{% if order.tracking_url %} · <a href="{{ order.tracking_url }}" target="_blank" rel="noopener noreferrer">Track shipment</a>{% endif %}</p>{% endif %}{% endif %}
+  {% if not order.entitlement_applied and order.status in ['created','failed'] %}<form method="post" action="/dashboard/billing/{{ order.id }}/recheck"><button class="btn btn-secondary btn-sm" type="submit">Check payment</button></form>{% endif %}
+  <p class="hint">Payment receipt only; not a GST tax invoice. <a href="/contact">Contact support</a> for payment or fulfilment queries.</p>
+</article>
+{% else %}<p class="hint">No purchases yet.</p>{% endfor %}
+</div>
+{% endblock %}

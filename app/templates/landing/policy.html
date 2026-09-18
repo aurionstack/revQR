@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} — RevQR{% endblock %}
+{% block body_class %}page-full{% endblock %}
+{% block content %}
+<nav class="landing-nav"><div class="landing-nav-inner"><a href="/" class="landing-logo" aria-label="RevQR home">{% include "components/revqr_logo.html" %}</a><a href="/login" class="btn btn-secondary btn-inline btn-sm">Log in</a></div></nav>
+<main class="public-page-hero policy-page">
+  <p class="eyebrow">RevQR · Aurion Stack</p><h1>{{ heading }}</h1><p class="hint">Effective 18 September 2026</p>
+  {% if not config.POLICIES_APPROVED and page != 'contact' %}<p class="security-alert" role="status">Pre-launch policy draft. New checkout remains closed while the operator completes launch verification.</p>{% endif %}
+  {% if page == 'contact' %}
+  <h2>Talk to us</h2><p>RevQR is operated under the <b>{{ config.LEGAL_BUSINESS_NAME }}</b> trading brand. This is not a claim of company incorporation.</p>
+  <p><a href="mailto:{{ config.SUPPORT_EMAIL }}">{{ config.SUPPORT_EMAIL }}</a><br /><a href="tel:{{ config.SUPPORT_PHONE }}">{{ config.SUPPORT_PHONE }}</a></p>
+  <p>{{ config.BUSINESS_ADDRESS }}</p><p>For payment, delivery, data deletion or account issues, include your account email and order reference. Never send passwords, OTPs, full card details or API keys.</p>
+  <p>For complaints, use the subject “RevQR complaint”. We aim to acknowledge complaints within 48 hours and resolve them within 30 days. A named grievance contact and complete operator address must be published before checkout opens.</p>
+  {% elif page == 'privacy' %}
+  <h2>Information we use</h2><p>Business names, login emails, password hashes, profile links, branding, subscription records and uploaded logos help us operate your account. We store customer ratings, notes, editable review drafts, private feedback, timestamps, scan sources, user-agent data and keyed IP hashes for analytics and abuse prevention.</p>
+  <h2>Service providers</h2><p>Customer notes, selected highlights and business context are sent to Google Gemini for drafting. Avoid sensitive personal information in hints. Razorpay processes payments; RevQR stores order/payment references and statuses, not full card data. Hosting/database providers store application data. Email providers deliver verification and purchase messages. Delivery details are shared with the courier for physical orders.</p>
+  <h2>Cookies and retention</h2><p>We use necessary cookies for sessions and verification flows. Operational logs and transactional records support security, fraud prevention and fulfilment. We retain account data while needed for the service; contact support to request access, correction or deletion. Some payment records may need retention for accounting or legal obligations. We do not promise immediate deletion from existing backups.</p>
+  <h2>Your choices</h2><p>Customer reviews remain editable and are posted only by the customer. Private notes are shared with the relevant business. Ask support about access, correction, deletion and provider processing. We do not sell customer review data.</p>
+  {% elif page == 'terms' %}
+  <h2>The service</h2><p>RevQR provides branded QR artwork, business analytics, AI-assisted review drafts and optional physical stands. It is not affiliated with Google or Razorpay. We do not guarantee Google rankings, review publication, a particular number of reviews or uninterrupted third-party services.</p>
+  <h2>Honest reviews only</h2><p>Use genuine experiences, not fabricated reviews, impersonation, incentives or rating manipulation. Every star rating has the same Google posting option. You must check AI drafts before use; business background must not become invented customer experiences.</p>
+  <h2>Subscriptions and fair use</h2><p>One business account costs ₹999 for 12 months or ₹1,599 for 24 months. The two-year option saves ₹399 (approximately 20%) against two annual purchases. Renewals are manual, not automatic recurring charges. QR scans are unlimited; AI requests share an allowance of {{ config.AI_MONTHLY_LIMIT }} per calendar month (UTC), up to {{ config.AI_DAILY_BUSINESS_LIMIT }} per day and {{ config.AI_SCAN_LIMIT }} per scan session. Owner replies share the same business allowance. Requests may count even if the provider fails. Provider outages, global safety budgets and abuse controls may limit AI availability; manual editing/posting remains available.</p>
+  <h2>Payments and responsibilities</h2><p>Prices shown at checkout are the final amount charged for that purchase. A payment receipt is not a GST tax invoice. Keep your login secure, verify your connected Google listing, and upload only assets you have permission to use. You retain ownership of your submitted content. Access may be suspended for abuse or fraud after review.</p>
+  <p>The refund and shipping policies form part of these terms. Nothing here removes rights you have under applicable law.</p>
+  {% elif page == 'refunds' %}
+  <h2>Digital subscriptions</h2><p>For your first paid subscription, request a full refund within 7 calendar days of payment if the service does not meet your needs. Contact support from the account email with the order/payment reference. Duplicate charges and paid-but-not-activated purchases will be investigated promptly. After the initial window, routine change-of-mind refunds are not offered; deficient service and statutory rights are assessed separately. Renewals do not automatically receive a new first-purchase trial window.</p>
+  <h2>Physical stands</h2><p>Cancel before custom production begins for a full refund. Once production has started, personalised stands are not ordinarily refundable for change of mind. If your stand is damaged, defective, incorrect or not delivered as agreed, contact support promptly—preferably within 7 days of delivery—with the order reference and photos where available. We will arrange an appropriate replacement or refund and return instructions; a reporting window does not remove statutory rights.</p>
+  <h2>Processing</h2><p>We aim to review requests within 3 business days and initiate approved refunds within 5 business days. Refunds go through Razorpay to the original payment method; your bank/payment provider controls final settlement timing. A refunded subscription may lose its corresponding paid access after review, without cancelling unrelated paid periods.</p>
+  {% elif page == 'shipping' %}
+  <h2>Digital delivery</h2><p>Paid digital access is activated after captured-payment verification. If activation is delayed, check your billing page or contact support; do not pay again until the original order is checked.</p>
+  <h2>Physical delivery</h2><p>Physical stands are optional and sold separately for ₹249 per item when ordering is open. Domestic shipping is included in the displayed price. Courier delivery is expected around one week: {{ config.SHIPPING_ESTIMATE }}</p>
+  <p>Serviceability depends on the supplied PIN code and courier coverage. Enter a complete address and reachable phone number. We will confirm any production or delivery delay, and tracking will appear in your billing page when available. International shipping is not currently offered.</p>
+  <p>For missing, damaged or incorrect orders, contact support. If we cannot fulfil an accepted order, we will offer a refund rather than silently change the price.</p>
+  {% endif %}
+  <p class="hint">Questions? <a href="mailto:{{ config.SUPPORT_EMAIL }}">{{ config.SUPPORT_EMAIL }}</a></p>
+</main>
+<footer class="landing-footer">{% include "components/policy_links.html" %}<p>© {{ current_year }} RevQR</p></footer>
+{% endblock %}

@@ -11,6 +11,8 @@
 {% if payment_success %}
 <div class="security-alert success-alert" role="status">Payment verified successfully. Your purchase is now active.</div>
 {% endif %}
+{% if not launch_config.PUBLIC_CHECKOUT_ENABLED %}<p class="security-alert" role="status">New checkout is temporarily closed while launch verification is completed. Existing paid access is unchanged.</p>{% endif %}
+{% include "components/fair_use.html" %}
 
 {% if business.has_active_subscription %}
 <div class="qr-page-grid">
@@ -58,6 +60,7 @@
     <h2>Delivered ready to display</h2>
     <p class="stand-order-price">₹{{ stand_price }} <span>per item</span></p>
     <p class="form-hint">A durable printed counter stand using your current business branding. Shipping is included.</p>
+    {% if launch_config.PHYSICAL_STANDS_ENABLED %}
     <form id="standOrderForm" onsubmit="startStandPayment(event)">
       <div class="stand-quantity-row">
         <label class="form-label" for="standQuantity">Quantity</label>
@@ -69,11 +72,13 @@
       <input class="form-input" id="shippingPostalCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit PIN code" autocomplete="postal-code" required />
       <button class="btn btn-primary" id="standPayBtn" type="submit">Order stand · ₹{{ stand_price }}</button>
     </form>
+    {% else %}<p class="security-alert">Physical stand ordering is not open yet. Digital standee downloads remain available.</p>{% endif %}
     {% if stand_orders %}
     <div class="recent-orders">
       <p class="chip-label">Recent orders</p>
       {% for order in stand_orders %}
       <div class="recent-order-row"><span>{{ order.quantity }} × stand</span><span class="status-pill">{{ (order.fulfillment_status or 'paid') | replace('_', ' ') | title }}</span></div>
+      {% if order.tracking_number %}<p class="form-hint">Tracking: {{ order.tracking_number }}{% if order.tracking_url %} · <a href="{{ order.tracking_url }}" target="_blank" rel="noopener noreferrer">Track shipment</a>{% endif %}</p>{% endif %}
       {% endfor %}
     </div>
     {% endif %}
