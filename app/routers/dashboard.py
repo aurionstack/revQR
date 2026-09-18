@@ -259,6 +259,8 @@ async def dashboard_standee(
     request: Request,
     business: Business = Depends(get_current_business)
 ):
+    if business.qr_revoked:
+        raise HTTPException(403, "QR access has been revoked. Contact support.")
     app_url = str(request.base_url).rstrip("/")
     review_link = f"{app_url}/review/{business.slug}"
 

@@ -29,6 +29,7 @@ class Business(Base):
     brand_color: Mapped[str] = mapped_column(String(7), default="#6366f1")
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    qr_revoked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)  # admin bypasses payment
     has_paid: Mapped[bool] = mapped_column(Boolean, default=False)  # unlocks QR generation
     totp_secret: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -67,6 +68,10 @@ class Business(Base):
     assets: Mapped[list["BusinessAsset"]] = relationship(
         back_populates="business", lazy="noload", passive_deletes="all"
     )
+
+    @property
+    def has_qr_access(self) -> bool:
+        return self.is_active and not self.qr_revoked and self.has_active_subscription
 
     @property
     def has_active_subscription(self) -> bool:

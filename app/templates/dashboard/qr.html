@@ -21,7 +21,9 @@
 </section>
 {% endif %}
 
-{% if business.has_active_subscription %}
+{% if business.qr_revoked %}
+<p class="security-alert" role="status">Your QR access has been revoked by an administrator. Existing QR links are disabled. Contact support; your payment records and subscription dates are preserved.</p>
+{% elif business.has_qr_access %}
 <div class="qr-page-grid">
   <section class="qr-workspace">
     <div class="qr-customizer">

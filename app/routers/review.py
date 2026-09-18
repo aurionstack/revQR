@@ -26,6 +26,15 @@ router = APIRouter(prefix="/review", tags=["Review Flow"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["local_time"] = format_local_datetime
 
+async def require_qr_access(business_slug: str, db: AsyncSession = Depends(get_db)):
+    business = (await db.execute(select(Business).where(Business.slug == business_slug))).scalar_one_or_none()
+    if not business or not business.is_active:
+        raise HTTPException(404, "Business not found or inactive.")
+    if business.qr_revoked:
+        raise HTTPException(403, "Review collection is temporarily unavailable for this business.")
+
+router.dependencies.append(Depends(require_qr_access))
+
 def get_client_ip(request: Request) -> str:
     """Helper to get client IP for hashing in Scan model."""
     if request.client and request.client.host:

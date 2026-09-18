@@ -266,6 +266,27 @@ async def toggle_paid_status(
     return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
 
 
+@router.post("/clients/{client_id}/qr-access")
+async def set_qr_access(
+    client_id: uuid.UUID,
+    revoke: bool = Form(...),
+    confirmed: bool = Form(False),
+    admin: Business = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if not confirmed:
+        raise HTTPException(400, "Confirm the QR access change first.")
+    biz = (await db.execute(select(Business).where(Business.id == client_id).with_for_update())).scalar_one_or_none()
+    if not biz:
+        raise HTTPException(404, "Client not found")
+    if biz.is_admin:
+        raise HTTPException(400, "Administrator QR access cannot be revoked here.")
+    biz.qr_revoked = revoke
+    await audit(db, admin.id, "qr.revoked" if revoke else "qr.restored", str(biz.id))
+    await db.commit()
+    return RedirectResponse("/admin", 303)
+
+
 @router.post("/clients/{client_id}/toggle-active")
 async def toggle_active_status(
     client_id: uuid.UUID,
@@ -330,6 +351,8 @@ async def view_client_standee(
     biz = res.scalar_one_or_none()
     if not biz:
         raise HTTPException(status_code=404, detail="Client not found")
+    if biz.qr_revoked:
+        raise HTTPException(403, "Restore QR access before creating a standee.")
 
     app_url = str(request.base_url).rstrip("/")
     review_link = f"{app_url}/review/{biz.slug}"

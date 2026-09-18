@@ -138,6 +138,14 @@
 
           <!-- Payment Status -->
           <div class="admin-client-payment">
+            {% if biz.qr_revoked %}<p class="receipt-badge pending">QR revoked</p>{% endif %}
+            {% if not biz.is_admin %}
+            <form method="post" action="/admin/clients/{{ biz.id }}/qr-access" onsubmit="return confirm('Change QR access? Existing printed codes will also be affected. Subscription and payment records are preserved.');">
+              <input type="hidden" name="revoke" value="{{ 'false' if biz.qr_revoked else 'true' }}" />
+              <input type="hidden" name="confirmed" value="true" />
+              <button type="submit" class="btn btn-secondary btn-sm">{{ 'Restore QR' if biz.qr_revoked else 'Revoke QR' }}</button>
+            </form>
+            {% endif %}
             {% if biz.has_active_subscription %}
             <span class="receipt-badge copied" style="display:inline-block; font-size:11px; padding:4px 10px;">
               ✓ Active
