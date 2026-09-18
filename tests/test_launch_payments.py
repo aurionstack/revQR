@@ -107,3 +107,27 @@ async def test_reconciliation_recovers_missing_browser_callback(provider,purchas
     assert await service.reconcile_order("order_launch_test",db_session,test_business.id)
     await db_session.refresh(purchase)
     assert purchase.status=="paid" and purchase.entitlement_applied
+
+
+@pytest.mark.asyncio
+async def test_live_one_rupee_checkout_is_restricted_to_verified_allowlisted_admin(monkeypatch,db_session,test_business):
+    monkeypatch.setattr(settings,"RAZORPAY_KEY_ID","rzp_live_test")
+    monkeypatch.setattr(settings,"RAZORPAY_KEY_SECRET","secret-test")
+    monkeypatch.setattr(settings,"RAZORPAY_WEBHOOK_SECRET","webhook-test")
+    monkeypatch.setattr(settings,"PUBLIC_CHECKOUT_ENABLED",False)
+    monkeypatch.setattr(settings,"POLICIES_APPROVED",False)
+    monkeypatch.setattr(settings,"LIVE_PAYMENT_TEST_EMAIL",test_business.email)
+    create=Mock(side_effect=lambda data:{"id":"order_one_rupee","amount":data['amount'],"currency":"INR"})
+    monkeypatch.setattr(service.client.order,"create",create)
+    with pytest.raises(service.PaymentConfigurationError):
+        await service.create_order(test_business.id,db_session,plan_code="annual")
+    test_business.is_admin=True
+    await db_session.commit()
+    result=await service.create_order(test_business.id,db_session,plan_code="annual")
+    assert result['amount']==100
+    with pytest.raises(service.PaymentConfigurationError):
+        await service.create_order(test_business.id,db_session,plan_code="two_year")
+    monkeypatch.setattr(settings,"LIVE_PAYMENT_TEST_EMAIL","another@example.com")
+    with pytest.raises(service.PaymentConfigurationError):
+        await service.create_order(test_business.id,db_session,plan_code="annual")
+    assert create.call_count==1

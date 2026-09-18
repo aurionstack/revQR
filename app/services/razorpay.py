@@ -105,17 +105,25 @@ async def create_order(
     """
     if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
         raise PaymentConfigurationError("Online payments are temporarily unavailable.")
-    if not settings.PUBLIC_CHECKOUT_ENABLED or not settings.POLICIES_APPROVED or not settings.RAZORPAY_WEBHOOK_SECRET:
+    test_purchase = False
+    if settings.LIVE_PAYMENT_TEST_EMAIL and purpose == "subscription" and plan_code == "annual":
+        business = await db.get(Business, business_id if isinstance(business_id, uuid.UUID) else uuid.UUID(str(business_id)))
+        test_purchase = bool(business and business.is_admin and business.email_verified
+            and business.email.lower() == settings.LIVE_PAYMENT_TEST_EMAIL.lower())
+    if (not settings.RAZORPAY_WEBHOOK_SECRET or
+            (not test_purchase and (not settings.PUBLIC_CHECKOUT_ENABLED or not settings.POLICIES_APPROVED))):
         raise PaymentConfigurationError("Checkout is not open yet. Please contact support.")
 
     if purpose == "subscription":
         plan = get_plan(plan_code)
         if not plan:
             raise ValueError("Select a valid subscription plan.")
-        amount = int(plan["amount"])
+        amount = 100 if test_purchase else int(plan["amount"])
         quantity = 1
         shipping_values = {}
         description = f"revQR {plan['name']} subscription"
+        if test_purchase:
+            description = "RevQR annual subscription — INR 1 live payment test"
     elif purpose == "physical_stand":
         if not settings.PHYSICAL_STANDS_ENABLED or not settings.SHIPPING_ESTIMATE:
             raise PaymentConfigurationError("Physical stand ordering is not open yet.")

@@ -13,6 +13,13 @@
 {% endif %}
 {% if not launch_config.PUBLIC_CHECKOUT_ENABLED %}<p class="security-alert" role="status">New checkout is temporarily closed while launch verification is completed. Existing paid access is unchanged.</p>{% endif %}
 {% include "components/fair_use.html" %}
+{% if business.is_admin and business.email_verified and launch_config.LIVE_PAYMENT_TEST_EMAIL and business.email | lower == launch_config.LIVE_PAYMENT_TEST_EMAIL | lower %}
+<section class="source-attribution billing-card" style="margin-bottom:24px;">
+  <h2>Administrator live payment test</h2>
+  <p>One-year subscription: ₹1 for this account only. This is a real payment; successful verification adds 12 months once. Public prices remain unchanged.</p>
+  <button type="button" class="btn btn-primary" onclick="startPayment('annual', this)">Pay ₹1 — test annual plan</button>
+</section>
+{% endif %}
 
 {% if business.has_active_subscription %}
 <div class="qr-page-grid">
