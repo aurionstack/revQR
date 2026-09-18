@@ -1,15 +1,22 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-PAGES = {"privacy": "Privacy policy", "terms": "Terms of service",
+PAGES = {"about": "About RevQR", "privacy": "Privacy policy", "terms": "Terms of service",
          "refunds": "Refunds & cancellations", "shipping": "Shipping & delivery", "contact": "Contact & support"}
 
 
+@router.get("/about-us", include_in_schema=False)
+async def about_alias():
+    return RedirectResponse("/about", status_code=308)
+
+
+@router.get("/about")
 @router.get("/privacy")
 @router.get("/terms")
 @router.get("/refunds")

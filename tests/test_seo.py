@@ -59,7 +59,7 @@ def test_sitemap_and_robots_expose_only_public_marketing_pages(client):
     namespace = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
     locations = [element.text for element in root.findall("sm:url/sm:loc", namespace)]
     origin = settings.APP_URL.rstrip("/")
-    assert locations == [f"{origin}/", f"{origin}/features", f"{origin}/pricing"]
+    assert locations == [f"{origin}/", f"{origin}/features", f"{origin}/pricing", f"{origin}/about"]
 
     robots_response = client.get("/robots.txt")
     assert robots_response.status_code == 200

@@ -5,8 +5,9 @@ PUBLIC_PAGES = (
     ("/", "Google Review QR Code & AI Review Assistant | revQR"),
     ("/features", "Google Review QR Code Features for Local Businesses | revQR"),
     ("/pricing", "revQR Pricing — Google Review QR Codes from ₹999/year"),
+    ("/about", "About RevQR — Aurion Stack"),
 )
-PUBLIC_CONTENT_LAST_MODIFIED = "2026-09-16"
+PUBLIC_CONTENT_LAST_MODIFIED = "2026-09-18"
 
 
 def site_url(app_url: str) -> str:

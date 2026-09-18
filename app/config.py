@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     SUPPORT_PHONE: str = "+919322974288"
     LEGAL_BUSINESS_NAME: str = "Aurion Stack"
     BUSINESS_ADDRESS: str = "Mapusa, Goa 403510, India (service location)"
+    GRIEVANCE_CONTACT_NAME: str = ""
     POLICIES_APPROVED: bool = False
     SHIPPING_ESTIMATE: str = "Approximately 7 business days from order confirmation, subject to production and courier availability."
     REFUND_POLICY: str = ""

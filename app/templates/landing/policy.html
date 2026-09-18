@@ -1,16 +1,33 @@
 {% extends "base.html" %}
 {% block title %}{{ heading }} — RevQR{% endblock %}
+{% block meta_description %}{% if page == 'about' %}Learn about RevQR by Aurion Stack: branded QR codes, honest customer feedback and editable AI-assisted review drafts for local businesses.{% else %}{{ heading }} for RevQR by Aurion Stack. Read our service information or contact support@revqr.tech for account, payment and delivery questions.{% endif %}{% endblock %}
+{% block robots %}{{ 'index, follow' if page == 'about' else 'noindex, follow' }}{% endblock %}
+{% block canonical_meta %}<link rel="canonical" href="{{ config.APP_URL.rstrip('/') }}/{{ page }}" />{% endblock %}
 {% block body_class %}page-full{% endblock %}
 {% block content %}
 <nav class="landing-nav"><div class="landing-nav-inner"><a href="/" class="landing-logo" aria-label="RevQR home">{% include "components/revqr_logo.html" %}</a><a href="/login" class="btn btn-secondary btn-inline btn-sm">Log in</a></div></nav>
 <main class="public-page-hero policy-page">
   <p class="eyebrow">RevQR · Aurion Stack</p><h1>{{ heading }}</h1><p class="hint">Effective 18 September 2026</p>
-  {% if not config.POLICIES_APPROVED and page != 'contact' %}<p class="security-alert" role="status">Pre-launch policy draft. New checkout remains closed while the operator completes launch verification.</p>{% endif %}
-  {% if page == 'contact' %}
+  {% if not config.POLICIES_APPROVED and page not in ['about', 'contact'] %}<p class="security-alert" role="status">Pre-launch policy draft. New checkout remains closed while the operator completes launch verification.</p>{% endif %}
+  {% if page == 'about' %}
+  <h2>A simpler way to hear from your customers</h2>
+  <p>RevQR is a QR-based customer feedback and review-assistance service operated under the {{ config.LEGAL_BUSINESS_NAME }} trading brand, based in Mapusa, Goa, India. We help local businesses make it easier for customers to share their real experiences.</p>
+  <h2>What we do</h2>
+  <p>Businesses can connect their Google review link, personalise QR artwork with their branding, download a standee image and track feedback from tables, counters or other locations. Customers scan the code, choose a rating and share highlights or notes. Optional AI assistance turns those details into an editable draft; customers decide what to copy and post themselves.</p>
+  <p>The business dashboard includes feedback history, source analytics, manual reply drafting and AI-assisted replies. Physical QR stands are an optional additional purchase when ordering is available.</p>
+  <h2>Real experiences, not manufactured reviews</h2>
+  <p>We do not sell reviews or promise search rankings. All ratings have the same option to post on Google. AI drafts must be checked by the customer and must not invent experiences. Private feedback is available separately; it is not a condition for leaving a public review.</p>
+  <h2>Clear plans and human support</h2>
+  <p>Subscriptions are ₹999 for one year or ₹1,599 for two years, with manual renewal. Physical stands are listed at ₹249 per item when ordering is open. See our <a href="/pricing">pricing</a>, <a href="/terms">fair-use terms</a>, <a href="/refunds">refunds</a> and <a href="/shipping">shipping information</a> before purchasing.</p>
+  <p>RevQR is independent of Google and Razorpay; these services control their own accounts, payment processing and review publication. Aurion Stack is our trading brand, not a claim of company incorporation.</p>
+  <p>Questions about your account or an order? Visit <a href="/contact">Contact &amp; support</a>.</p>
+  {% elif page == 'contact' %}
   <h2>Talk to us</h2><p>RevQR is operated under the <b>{{ config.LEGAL_BUSINESS_NAME }}</b> trading brand. This is not a claim of company incorporation.</p>
   <p><a href="mailto:{{ config.SUPPORT_EMAIL }}">{{ config.SUPPORT_EMAIL }}</a><br /><a href="tel:{{ config.SUPPORT_PHONE }}">{{ config.SUPPORT_PHONE }}</a></p>
   <p>{{ config.BUSINESS_ADDRESS }}</p><p>For payment, delivery, data deletion or account issues, include your account email and order reference. Never send passwords, OTPs, full card details or API keys.</p>
-  <p>For complaints, use the subject “RevQR complaint”. We aim to acknowledge complaints within 48 hours and resolve them within 30 days. A named grievance contact and complete operator address must be published before checkout opens.</p>
+  <h2>Complaints and grievance contact</h2>
+  {% if config.GRIEVANCE_CONTACT_NAME %}<p>Contact person: <b>{{ config.GRIEVANCE_CONTACT_NAME }}</b><br />Email: <a href="mailto:{{ config.SUPPORT_EMAIL }}">{{ config.SUPPORT_EMAIL }}</a><br />Phone: <a href="tel:{{ config.SUPPORT_PHONE }}">{{ config.SUPPORT_PHONE }}</a><br />Postal address: {{ config.BUSINESS_ADDRESS }}</p>{% else %}<p class="security-alert">The named complaint contact and full operator postal address are awaiting confirmation. New public checkout remains closed.</p>{% endif %}
+  <p>For complaints, use the subject “RevQR complaint”. We aim to acknowledge complaints within 48 hours and resolve them within 30 days. Include the issue, order reference and preferred resolution; never include a password or OTP.</p>
   {% elif page == 'privacy' %}
   <h2>Information we use</h2><p>Business names, login emails, password hashes, profile links, branding, subscription records and uploaded logos help us operate your account. We store customer ratings, notes, editable review drafts, private feedback, timestamps, scan sources, user-agent data and keyed IP hashes for analytics and abuse prevention.</p>
   <h2>Service providers</h2><p>Customer notes, selected highlights and business context are sent to Google Gemini for drafting. Avoid sensitive personal information in hints. Razorpay processes payments; RevQR stores order/payment references and statuses, not full card data. Hosting/database providers store application data. Email providers deliver verification and purchase messages. Delivery details are shared with the courier for physical orders.</p>

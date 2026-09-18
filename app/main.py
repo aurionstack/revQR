@@ -179,7 +179,7 @@ async def security_middleware(request: Request, call_next):
     vary_values = {value.strip() for value in current_vary.split(",") if value.strip()}
     vary_values.update({"Origin", "Sec-Fetch-Site"})
     response.headers["Vary"] = ", ".join(sorted(vary_values))
-    public_indexable_paths = {"/", "/features", "/pricing", "/robots.txt", "/sitemap.xml"}
+    public_indexable_paths = {"/", "/features", "/pricing", "/about", "/robots.txt", "/sitemap.xml"}
     if request.url.path in public_indexable_paths:
         response.headers.setdefault("Cache-Control", "public, max-age=300, stale-while-revalidate=86400")
     elif request.url.path.startswith("/static/"):
