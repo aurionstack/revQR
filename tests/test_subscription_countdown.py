@@ -9,6 +9,8 @@ def test_subscription_countdown_is_shown_in_owner_views():
     script = Path("app/static/js/app.js").read_text(encoding="utf-8")
     assert "data-subscription-expiry" in component
     assert "days · " in script and "hours · " in script and "minutes" in script
-    for name in ("home.html", "qr.html", "billing.html"):
+    for name in ("home.html", "qr.html"):
         source = Path("app/templates/dashboard", name).read_text(encoding="utf-8")
         assert 'components/subscription_countdown.html' in source
+    billing = Path("app/templates/dashboard/billing.html").read_text(encoding="utf-8")
+    assert 'components/subscription_countdown.html' not in billing
