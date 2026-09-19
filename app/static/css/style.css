@@ -2281,11 +2281,11 @@ textarea::placeholder {
   background: var(--stand-accent);
 }
 .standee-header {
-  padding: 14px 16px 0;
+  padding: 12px 16px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 .standee-logo {
   width: 44px;
@@ -2324,20 +2324,20 @@ textarea::placeholder {
   letter-spacing: .025em;
 }
 .standee-headline {
-  padding: 10px 18px;
+  padding: 7px 18px;
   font-family: var(--sans);
   font-size: 15px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.32;
   color: #333;
 }
 .standee-stars {
   font-size: 21px;
   letter-spacing: 3px;
-  padding: 2px 0;
+  padding: 0;
 }
 .standee-qr {
-  padding: 8px 0;
+  padding: 5px 0;
   width: 100%;
   box-sizing: border-box;
   display: grid;
@@ -2367,29 +2367,35 @@ textarea::placeholder {
   font-family: var(--sans);
   font-size: 13px;
   color: #666;
-  padding: 0 18px 4px;
-  line-height: 1.5;
+  padding: 0 18px 2px;
+  line-height: 1.4;
 }
 .standee-footer {
   margin-top: auto;
-  padding: 4px 18px 28px;
+  flex: 0 0 66px;
+  min-height: 66px;
+  box-sizing: border-box;
+  padding: 2px 18px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 7px;
+  overflow: hidden;
 }
 .standee-brand-lockup {
   width: 120px;
-  min-height: 34px;
+  height: 27px;
+  flex: 0 0 27px;
   display: grid;
   place-items: center;
 }
 .standee-brand-logo {
   display: block;
   width: 112px;
-  height: auto;
-  max-height: 30px;
-  object-fit: contain;
+  height: 27px;
+  margin: 0 auto;
+  background: url('/static/revqr-logo.svg') center center / contain no-repeat;
 }
 .standee-badge {
   font-family: var(--sans);
@@ -2400,6 +2406,8 @@ textarea::placeholder {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  line-height: 14px;
+  white-space: nowrap;
 }
 
 .standee-controls {
