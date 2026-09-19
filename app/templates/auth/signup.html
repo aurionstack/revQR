@@ -68,42 +68,9 @@
           </div>
           <p class="form-hint" style="margin-top:-12px; margin-bottom:18px;">Use at least 10 characters with uppercase, lowercase, and a number.</p>
 
-          <div class="form-group">
-            <label class="form-label" for="google_place_id">Google review link</label>
-            <input
-              class="form-input"
-              type="text"
-              id="google_place_id"
-              name="google_place_id"
-              placeholder="https://g.page/r/.../review"
-              maxlength="255"
-              value="{{ form_data.google_place_id if form_data else '' }}"
-            />
-            <p class="form-hint">
-              In your Google Business Profile, choose <b>Ask for reviews</b> and paste the link here. No Google API key is needed.
-              <a href="https://support.google.com/business/answer/3474122" target="_blank" rel="noopener">
-                How to get your review link →
-              </a>
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="phone">Phone <span style="font-weight:400; letter-spacing:normal; text-transform:none;">(optional)</span></label>
-            <input
-              class="form-input"
-              type="tel"
-              id="phone"
-              name="phone"
-              placeholder="+91 98765 43210"
-              maxlength="20"
-              value="{{ form_data.phone if form_data else '' }}"
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="businessDescription">Business description <span style="font-weight:400; text-transform:none;">(optional)</span></label>
-            <textarea class="form-input" id="businessDescription" name="business_description" rows="3" maxlength="2000" placeholder="What does your business do? Mention your main services or products.">{{ form_data.business_description if form_data else '' }}</textarea>
-            <p class="form-hint">We try to import your connected Google profile's public description. Add your own details here if Google restricts access. You can update this in Settings.</p>
+          <div class="signup-next-steps" aria-label="What happens after account creation">
+            <p class="eyebrow">Next: guided setup</p>
+            <p>After verifying your email, connect your Google review link, add your branding, customize the 4 × 6 standee, and download your QR.</p>
           </div>
 
           <div class="continue-row">
@@ -120,7 +87,7 @@
 
       <div class="perf" style="margin-top:0;"></div>
       <div class="ticket-footer">
-        <p class="meta-line">QRREVIEWS.APP</p>
+        <p class="meta-line">REVQR.TECH</p>
       </div>
     </main>
     <div class="torn-bottom"></div>

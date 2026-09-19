@@ -33,6 +33,23 @@ def test_homepage_has_complete_search_and_social_metadata(client):
     assert {"Organization", "WebSite", "SoftwareApplication"}.issubset(types)
     software = next(entry for entry in structured["@graph"] if entry["@type"] == "SoftwareApplication")
     assert {offer["price"] for offer in software["offers"]} == {"1599", "2499"}
+    assert "Turn more customer visits into" in html
+    assert "Google-compliant" not in html
+    assert "Try the Customer Experience" in html
+    assert response.headers["cache-control"] == "public, max-age=60, must-revalidate"
+
+
+def test_signup_is_low_friction_and_uses_current_brand(client):
+    response = client.get("/signup")
+    assert response.status_code == 200
+    assert 'name="name"' in response.text
+    assert 'name="email"' in response.text
+    assert 'name="password"' in response.text
+    assert 'name="google_place_id"' not in response.text
+    assert 'name="phone"' not in response.text
+    assert 'name="business_description"' not in response.text
+    assert "REVQR.TECH" in response.text
+    assert "QRREVIEWS.APP" not in response.text
 
 
 @pytest.mark.parametrize(

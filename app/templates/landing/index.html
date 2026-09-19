@@ -45,64 +45,38 @@
 </nav>
 
 <main id="main-content">
-<!-- Hero -->
-<section class="landing-hero">
-  <p class="eyebrow" style="margin-bottom:16px;">For restaurants, cafés, salons &amp; local businesses</p>
-  <h1 class="landing-hero-title">
-    Turn every customer into a<br />
-    <span style="color:var(--accent);">real Google review</span>
-  </h1>
-  <p class="landing-hero-sub">
-    Print a QR code. Customers scan, rate, and get an AI-drafted review they can edit and post — all in 30 seconds.
-  </p>
-  <div class="landing-hero-actions">
-    <a href="/signup" class="btn btn-primary btn-inline" style="text-decoration:none; padding:16px 32px;">
-      Create Your QR Code
-    </a>
-    <a href="#how-it-works" class="btn btn-secondary btn-inline" style="text-decoration:none; padding:16px 32px;">
-      See How It Works
-    </a>
+<!-- Hero: physical stand + customer flow -->
+<section class="landing-hero landing-hero-product">
+  <div class="landing-hero-copy">
+    <p class="eyebrow">Customer review infrastructure for local businesses</p>
+    <h1 class="landing-hero-title">Turn more customer visits into <span>genuine Google reviews</span></h1>
+    <p class="landing-hero-sub">One branded QR. Customers scan, share what mattered, and get help putting their own experience into words—no app required.</p>
+    <div class="landing-hero-actions">
+      <a href="/signup" class="btn btn-primary btn-inline">Create Your QR</a>
+      <a href="#live-demo" class="btn btn-secondary btn-inline">Try the Customer Experience</a>
+    </div>
+    <p class="hero-trust-line">No review gating · Every rating gets the same path · Customer-controlled posting</p>
+  </div>
+  <div class="hero-product-scene" aria-label="RevQR table stand and mobile customer review flow">
+    <div class="hero-stand">
+      <div class="hero-stand-brand">YOUR BUSINESS</div>
+      <div class="hero-stand-tag">📍 TABLE 1</div>
+      <strong>Leave a quick review!</strong>
+      <div class="hero-stars" aria-hidden="true">★★★★★</div>
+      <div class="hero-qr" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <small>Scan with your phone camera</small>
+      <b>revQR</b>
+    </div>
+    <div class="hero-phone">
+      <div class="hero-phone-notch"></div>
+      <p>How was your visit?</p>
+      <div class="hero-phone-stars">★★★★★</div>
+      <div class="hero-phone-chip-row"><span>Great service</span><span>Friendly staff</span></div>
+      <div class="hero-phone-draft">“The team was welcoming, attentive, and made the whole visit feel effortless…”</div>
+      <div class="hero-phone-action">Copy &amp; open Google</div>
+    </div>
   </div>
 </section>
-
-<!-- Ticket Demo Preview -->
-<div style="display:flex; justify-content:center; padding:0 16px 60px;">
-  <div class="stage" style="max-width:360px;">
-    <div class="ticket" style="pointer-events:none;">
-      <div class="ticket-head">
-        <p class="eyebrow">Scan Receipt</p>
-        <div class="biz-row">
-          <div class="biz-logo">K&amp;</div>
-          <div class="biz-name">Your Business</div>
-        </div>
-        <p class="meta-line">LIVE PREVIEW</p>
-      </div>
-      <div class="perf"></div>
-      <div style="padding:24px; text-align:center;">
-        <h2 class="q">How was your visit?</h2>
-        <div style="display:flex; justify-content:center; gap:6px; margin-bottom:12px;">
-          {% for i in range(5) %}
-          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M12 2l2.9 6.6L22 9.3l-5.2 4.9L18.2 22 12 18.3 5.8 22l1.4-7.8L2 9.3l7.1-.7L12 2z"
-              fill="{{ 'var(--accent)' if i < 4 else 'none' }}"
-              stroke="{{ 'var(--accent-deep)' if i < 4 else 'var(--ink-faint)' }}"
-              stroke-width="1.6"/>
-          </svg>
-          {% endfor %}
-        </div>
-        <p class="rating-label">Really good</p>
-        <div class="stamp-wrap" style="margin-top:12px;">
-          <div class="stamp show" style="animation:none; opacity:1;">★★★★☆ noted</div>
-        </div>
-      </div>
-      <div class="perf" style="margin-top:0;"></div>
-      <div class="ticket-footer">
-        <p class="meta-line">REVQR.TECH</p>
-      </div>
-    </div>
-    <div class="torn-bottom"></div>
-  </div>
-</div>
 
 <!-- How It Works -->
 <section class="landing-section" id="how-it-works">
@@ -116,12 +90,12 @@
     <div class="step-card">
       <div class="step-number">02</div>
       <h3 class="step-title">Customer Scans &amp; Rates</h3>
-      <p class="step-desc">They tap a star rating and jot quick notes. Takes 15 seconds. Works on any phone, no app needed.</p>
+      <p class="step-desc">They choose a star rating and share quick details. Takes less than 30 seconds and works on any phone, with no app needed.</p>
     </div>
     <div class="step-card">
       <div class="step-number">03</div>
       <h3 class="step-title">AI Drafts, They Post</h3>
-      <p class="step-desc">AI writes a natural review matching their rating. They edit if they want, copy it, and post on Google.</p>
+      <p class="step-desc">AI uses the details they provide to prepare editable wording. They decide what to copy and personally post on Google.</p>
     </div>
   </div>
 </section>
@@ -155,18 +129,64 @@
   <h2 class="landing-section-title">Why local businesses use it</h2>
   <div class="stats-grid" style="max-width:640px; margin:0 auto;">
     <div class="stat-card">
-      <div class="stat-label">Time to review</div>
-      <div class="stat-value">30<span class="stat-unit">sec</span></div>
+      <div class="stat-label">Customer setup</div>
+      <div class="stat-value" style="font-size:18px;">No app</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Customer effort</div>
-      <div class="stat-value">3<span class="stat-unit">taps</span></div>
+      <div class="stat-label">Review draft</div>
+      <div class="stat-value" style="font-size:18px;">Editable</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Every rating</div>
       <div class="stat-value" style="font-size:18px;">1★ to 5★</div>
-      <p class="hint" style="margin-top:4px;">No review gating — every customer gets the same path. Google-compliant.</p>
+      <p class="hint" style="margin-top:4px;">No review gating — every customer gets the same path.</p>
     </div>
+  </div>
+</section>
+
+<!-- Interactive no-registration demo -->
+<section class="landing-section live-demo-section" id="live-demo" aria-labelledby="demo-title">
+  <div class="landing-copy-intro">
+    <p class="eyebrow">Try it without registering</p>
+    <h2 id="demo-title">See the customer journey in seconds</h2>
+    <p>This preview shows how a customer rates a visit, chooses relevant details, and receives an editable draft. Nothing here is submitted or stored.</p>
+  </div>
+  <div class="demo-flow" data-demo-flow>
+    <div class="demo-progress"><span class="active">1 · Rate</span><span>2 · Details</span><span>3 · Draft</span></div>
+    <div class="demo-panel active" data-demo-step="0">
+      <h3>How was your visit?</h3>
+      <div class="demo-stars" role="group" aria-label="Choose a sample rating">
+        {% for i in range(1, 6) %}<button type="button" data-rating="{{ i }}" aria-label="{{ i }} stars">★</button>{% endfor %}
+      </div>
+      <p>Select any rating to continue.</p>
+    </div>
+    <div class="demo-panel" data-demo-step="1">
+      <h3>What stood out?</h3>
+      <div class="demo-tags"><button type="button">Food</button><button type="button">Service</button><button type="button">Atmosphere</button><button type="button">Value</button><button type="button">Cleanliness</button><button type="button">Something else</button></div>
+      <button type="button" class="btn btn-primary btn-inline demo-next">Create sample draft</button>
+    </div>
+    <div class="demo-panel" data-demo-step="2">
+      <p class="eyebrow">Editable sample</p>
+      <textarea rows="4">I had a genuinely enjoyable visit. The service felt attentive, the atmosphere was welcoming, and everything was handled with care.</textarea>
+      <p>In the real flow, the customer can edit every word before choosing what to copy and post.</p>
+      <a href="/signup" class="btn btn-primary btn-inline">Create one for your business</a>
+      <button type="button" class="btn-ghost demo-restart">Restart demo</button>
+    </div>
+  </div>
+</section>
+
+<!-- Concrete source analytics -->
+<section class="landing-section source-story-section" aria-labelledby="source-story-title">
+  <div>
+    <p class="eyebrow">More than a free review link</p>
+    <h2 id="source-story-title">Know which table, counter or location drives engagement</h2>
+    <p>Add an optional source tag to each downloaded QR. RevQR connects scans and completed review journeys to the placement that generated them.</p>
+  </div>
+  <div class="sample-dashboard" aria-label="Illustrative source analytics preview">
+    <p class="sample-label">Illustrative dashboard</p>
+    <div class="sample-source-row"><b>Table 1</b><span>27 scans</span><span>11 completed</span></div>
+    <div class="sample-source-row"><b>Table 4</b><span>42 scans</span><span>21 completed</span></div>
+    <div class="sample-source-row"><b>Reception</b><span>14 scans</span><span>7 completed</span></div>
   </div>
 </section>
 
@@ -246,4 +266,26 @@
   </nav>
   <p>© {{ current_year if current_year else '2026' }} revQR · Google review QR tools for Indian local businesses</p>
 </footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const root = document.querySelector('[data-demo-flow]');
+  if (!root) return;
+  const panels = [...root.querySelectorAll('[data-demo-step]')];
+  const progress = [...root.querySelectorAll('.demo-progress span')];
+  const show = (step) => {
+    panels.forEach((panel, index) => panel.classList.toggle('active', index === step));
+    progress.forEach((item, index) => item.classList.toggle('active', index <= step));
+  };
+  root.querySelectorAll('.demo-stars button').forEach((button) => button.addEventListener('click', () => {
+    root.querySelectorAll('.demo-stars button').forEach((star, index) => star.classList.toggle('selected', index < Number(button.dataset.rating)));
+    window.setTimeout(() => show(1), 180);
+  }));
+  root.querySelectorAll('.demo-tags button').forEach((button) => button.addEventListener('click', () => button.classList.toggle('selected')));
+  root.querySelector('.demo-next').addEventListener('click', () => show(2));
+  root.querySelector('.demo-restart').addEventListener('click', () => show(0));
+})();
+</script>
 {% endblock %}

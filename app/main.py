@@ -181,7 +181,9 @@ async def security_middleware(request: Request, call_next):
     response.headers["Vary"] = ", ".join(sorted(vary_values))
     public_indexable_paths = {"/", "/features", "/pricing", "/about", "/robots.txt", "/sitemap.xml"}
     if request.url.path in public_indexable_paths:
-        response.headers.setdefault("Cache-Control", "public, max-age=300, stale-while-revalidate=86400")
+        # Marketing and pricing copy changes should propagate quickly. Long-lived
+        # stale responses can expose retired prices after a production update.
+        response.headers.setdefault("Cache-Control", "public, max-age=60, must-revalidate")
     elif request.url.path.startswith("/static/"):
         response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
     elif not request.url.path.startswith("/static/"):
