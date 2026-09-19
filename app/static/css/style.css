@@ -2116,67 +2116,68 @@ textarea::placeholder {
 }
 
 .standee-card {
-  width: 280px;
+  width: 320px;
+  aspect-ratio: 2 / 3;
   background: white;
-  border-radius: 16px;
+  border-radius: 10px;
   box-shadow: var(--shadow-card);
   overflow: hidden;
   text-align: center;
-  transition: width .3s ease;
+  display: flex;
+  flex-direction: column;
 }
-.standee-card.standee-a5 { width: 320px; }
-.standee-card.standee-a4 { width: 380px; }
 
 .standee-accent {
-  height: 6px;
+  height: 5px;
+  flex: 0 0 5px;
   width: 100%;
 }
 .standee-header {
-  padding: 24px 20px 0;
+  padding: 14px 16px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 .standee-logo {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
 }
 .standee-logo-placeholder {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-family: var(--mono);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
 }
 .standee-biz-name {
   font-family: var(--sans);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #1a1a1a;
 }
 .standee-headline {
-  padding: 16px 20px;
+  padding: 10px 18px;
   font-family: var(--sans);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
   color: #333;
 }
 .standee-stars {
-  font-size: 24px;
-  letter-spacing: 4px;
-  padding: 4px 0;
+  font-size: 21px;
+  letter-spacing: 3px;
+  padding: 2px 0;
 }
 .standee-qr {
-  padding: 20px 0;
+  padding: 8px 0;
   width: 100%;
   box-sizing: border-box;
   display: grid;
@@ -2185,15 +2186,15 @@ textarea::placeholder {
   text-align: center;
 }
 .standee-qr-frame {
-  width: 160px;
-  height: 160px;
+  width: 145px;
+  height: 145px;
   margin-inline: auto;
   display: grid;
   place-items: center;
 }
 .standee-qr img {
-  width: 160px;
-  height: 160px;
+  width: 145px;
+  height: 145px;
   display: block;
   margin: 0 !important;
   justify-self: center;
@@ -2204,7 +2205,7 @@ textarea::placeholder {
   font-family: var(--sans);
   font-size: 13px;
   color: #666;
-  padding: 0 20px 8px;
+  padding: 0 18px 4px;
   line-height: 1.5;
 }
 .standee-url {
@@ -2212,14 +2213,14 @@ textarea::placeholder {
   font-size: 10px;
   color: #999;
   letter-spacing: .04em;
-  padding: 8px 20px;
+  padding: 4px 18px;
   word-break: break-all;
 }
 .standee-badge {
   font-family: var(--sans);
   font-size: 11px;
   color: #666;
-  padding: 8px 0 16px;
+  padding: 5px 0 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2232,10 +2233,31 @@ textarea::placeholder {
 .standee-control-group {
   margin-bottom: 20px;
 }
-.standee-size-btn.active {
+.standee-fixed-size {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-deep);
+}
+.standee-fixed-size-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 9px;
   background: var(--ink);
   color: var(--paper);
-  border-color: var(--ink);
+  font: 700 18px var(--mono);
+}
+.standee-fixed-size strong { font-size: 13px; }
+.standee-fixed-size p {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font: 11px/1.45 var(--mono);
 }
 
 
@@ -2521,14 +2543,11 @@ textarea::placeholder {
 
   .standee-layout { gap: 20px; }
   .standee-preview-wrap { padding: 0; min-width: 0; }
-  .standee-card,
-  .standee-card.standee-a5,
-  .standee-card.standee-a4 { max-width: 100%; }
+  .standee-card { width: min(100%, 320px); max-width: 100%; }
   .standee-controls { padding: 2px 0; min-width: 0; }
   .standee-control-group .wa-input { width: 100%; }
-  .standee-size-btn { flex: 1 1 145px; }
   .standee-qr-frame,
-  .standee-qr img { width: 150px; height: 150px; }
+  .standee-qr img { width: 145px; height: 145px; }
 
   /* WhatsApp tools */
   .wa-template-card { padding: 17px 15px; }

@@ -41,3 +41,21 @@ async def test_qr_page_unlocked(auth_client, test_business, db_session):
     response = auth_client.get("/dashboard/qr")
     assert response.status_code == 200
     assert "PNG" in response.text
+
+
+@pytest.mark.asyncio
+async def test_standee_uses_single_fixed_four_by_six_format(
+    auth_client, test_business, db_session
+):
+    test_business.has_paid = True
+    db_session.add(test_business)
+    await db_session.commit()
+
+    response = auth_client.get("/dashboard/standee")
+    assert response.status_code == 200
+    assert "4 × 6 inches" in response.text
+    assert "1200 × 1800 px" in response.text
+    assert "A4 (Wall Poster)" not in response.text
+    assert "A5 (Counter)" not in response.text
+    assert "A6 (Table Tent)" not in response.text
+    assert "setStandeeSize" not in response.text

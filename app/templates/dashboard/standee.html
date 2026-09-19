@@ -6,7 +6,7 @@
 {% block dash_content %}
 <div class="dash-header">
   <h1 class="dash-title">Print-Ready Standee Kit</h1>
-  <p class="dash-subtitle">Download a branded review standee for your counter, tables, or entrance</p>
+  <p class="dash-subtitle">Create a fixed 4 × 6 inch insert for the revQR acrylic tabletop holder</p>
 </div>
 
 {% if business.has_qr_access %}
@@ -14,7 +14,7 @@
 <div class="standee-layout">
   <!-- Live Preview -->
   <div class="standee-preview-wrap">
-    <div class="standee-card" id="standeeCard">
+    <div class="standee-card" id="standeeCard" aria-label="4 by 6 inch portrait stand insert preview">
       <!-- Top accent bar -->
       <div class="standee-accent" style="background:{{ business.brand_color or '#6366f1' }};"></div>
 
@@ -90,12 +90,11 @@
       <p class="hint" style="margin-top:4px;">Adds a physical label on the standee and tracks reviews per table/counter in your analytics.</p>
     </div>
 
-    <div class="standee-control-group">
-      <label class="wa-label">Size</label>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-secondary btn-sm btn-inline standee-size-btn active" data-size="a6" onclick="setStandeeSize('a6')">A6 (Table Tent)</button>
-        <button type="button" class="btn btn-secondary btn-sm btn-inline standee-size-btn" data-size="a5" onclick="setStandeeSize('a5')">A5 (Counter)</button>
-        <button type="button" class="btn btn-secondary btn-sm btn-inline standee-size-btn" data-size="a4" onclick="setStandeeSize('a4')">A4 (Wall Poster)</button>
+    <div class="standee-control-group standee-fixed-size">
+      <span class="standee-fixed-size-icon" aria-hidden="true">↕</span>
+      <div>
+        <strong>Fixed acrylic insert size</strong>
+        <p>4 × 6 inches · 10.16 × 15.24 cm · portrait</p>
       </div>
     </div>
 
@@ -105,7 +104,7 @@
         ↓ Download Whole Standee
       </button>
       <p class="hint" style="margin-top:12px;">
-        Saves the complete customized standee as a high-resolution PNG image.
+        Downloads an exact 1200 × 1800 px PNG, ready to print at 4 × 6 inches (300 DPI).
       </p>
     </div>
   </div>
@@ -159,13 +158,6 @@
     }
   };
 
-  window.setStandeeSize = function(size) {
-    var card = document.getElementById('standeeCard');
-    document.querySelectorAll('.standee-size-btn').forEach(function(b) { b.classList.remove('active'); });
-    document.querySelector('[data-size="' + size + '"]').classList.add('active');
-    card.className = 'standee-card standee-' + size;
-  };
-
   function waitForImages(container) {
     return Promise.all(Array.from(container.querySelectorAll('img')).map(function(img) {
       if (img.complete) return Promise.resolve();
@@ -192,14 +184,23 @@
     try {
       await waitForImages(card);
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      var canvas = await html2canvas(card, {
+      var rendered = await html2canvas(card, {
         scale: 4,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false
       });
+      var canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 1800;
+      var context = canvas.getContext('2d');
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(rendered, 0, 0, canvas.width, canvas.height);
       var link = document.createElement('a');
-      link.download = 'revqr-standee-' + baseSlug + '.png';
+      link.download = 'revqr-standee-' + baseSlug + '-4x6.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
       showToast('Standee image downloaded', 'success');
