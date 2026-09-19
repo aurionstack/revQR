@@ -2118,6 +2118,8 @@ textarea::placeholder {
 .standee-card {
   width: 320px;
   aspect-ratio: 2 / 3;
+  position: relative;
+  isolation: isolate;
   background: white;
   border-radius: 10px;
   box-shadow: var(--shadow-card);
@@ -2125,6 +2127,22 @@ textarea::placeholder {
   text-align: center;
   display: flex;
   flex-direction: column;
+}
+.standee-card::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: 190px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 0 0, rgba(99, 102, 241, .12), transparent 52%),
+    radial-gradient(circle at 100% 6%, rgba(96, 165, 250, .10), transparent 48%),
+    linear-gradient(180deg, rgba(245, 243, 255, .72), rgba(255, 255, 255, 0));
+}
+.standee-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .standee-accent {
@@ -2184,6 +2202,8 @@ textarea::placeholder {
   place-items: center;
   align-self: stretch;
   text-align: center;
+  /* Keep the complete scanning zone neutral for maximum QR contrast. */
+  background: #fff;
 }
 .standee-qr-frame {
   width: 150px;
