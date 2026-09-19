@@ -42,7 +42,7 @@ async def get_qr_image(
         if not target_business:
             raise HTTPException(status_code=404, detail="Business not found.")
 
-    # Check paywall (admin always bypasses)
+    # Administrative privileges do not bypass the QR subscription paywall.
     if target_business.qr_revoked:
         raise HTTPException(status_code=403, detail="QR access has been revoked. Contact support.")
     if not target_business.has_qr_access:

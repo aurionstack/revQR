@@ -13,6 +13,7 @@
 {% endif %}
 {% if not launch_config.PUBLIC_CHECKOUT_ENABLED %}<p class="security-alert" role="status">New checkout is temporarily closed while launch verification is completed. Existing paid access is unchanged.</p>{% endif %}
 {% include "components/fair_use.html" %}
+{% include "components/subscription_countdown.html" %}
 {% if business.is_admin and business.email_verified and launch_config.LIVE_PAYMENT_TEST_EMAIL and business.email | lower == launch_config.LIVE_PAYMENT_TEST_EMAIL | lower %}
 <section class="source-attribution billing-card" style="margin-bottom:24px;">
   <h2>Administrator live payment test</h2>

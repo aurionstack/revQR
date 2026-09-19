@@ -59,12 +59,9 @@ async def admin_dashboard(
     total_clients = total_clients_res.scalar() or 0
 
     now = datetime.now(timezone.utc)
-    paid_clients_res = await db.execute(select(func.count(Business.id)).filter(or_(
-        Business.is_admin == True,
-        and_(
-            Business.has_paid == True,
-            or_(Business.subscription_expires_at.is_(None), Business.subscription_expires_at > now),
-        ),
+    paid_clients_res = await db.execute(select(func.count(Business.id)).filter(and_(
+        Business.has_paid == True,
+        or_(Business.subscription_expires_at.is_(None), Business.subscription_expires_at > now),
     )))
     paid_clients = paid_clients_res.scalar() or 0
 

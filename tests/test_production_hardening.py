@@ -44,6 +44,12 @@ def test_calendar_subscription_extension():
     assert add_months(start, 12).date().isoformat() == "2027-01-31"
 
 
+def test_admin_privilege_does_not_grant_qr_subscription():
+    admin = make_business(is_admin=True, has_paid=False)
+    assert admin.has_active_subscription is False
+    assert admin.has_qr_access is False
+
+
 def test_subscription_expiry_is_enforced():
     active = make_business(has_paid=True, subscription_expires_at=datetime.now(timezone.utc) + timedelta(days=1))
     expired = make_business(has_paid=True, subscription_expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))

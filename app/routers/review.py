@@ -32,6 +32,10 @@ async def require_qr_access(business_slug: str, db: AsyncSession = Depends(get_d
         raise HTTPException(404, "Business not found or inactive.")
     if business.qr_revoked:
         raise HTTPException(403, "Review collection is temporarily unavailable for this business.")
+    # Super-admin accounts use the same paid entitlement as customers for their
+    # own QR profile. Administrative privileges never unlock a public QR.
+    if business.is_admin and not business.has_active_subscription:
+        raise HTTPException(402, "This QR subscription is not active.")
 
 router.dependencies.append(Depends(require_qr_access))
 

@@ -1,0 +1,11 @@
+{% if business.subscription_expires_at and business.has_active_subscription %}
+<section class="source-attribution subscription-countdown" data-subscription-expiry="{{ business.subscription_expires_at.isoformat() }}" aria-live="polite">
+  <p class="eyebrow">Subscription time remaining</p>
+  <p class="subscription-countdown-value" data-countdown-value>Calculating…</p>
+  <p class="hint">Active until {{ business.subscription_expires_at | local_time('%d %b %Y, %I:%M %p') }}. Renewing adds time after this date.</p>
+</section>
+{% elif not business.has_active_subscription %}
+<section class="source-attribution subscription-countdown">
+  <p class="eyebrow">Subscription</p><p class="subscription-countdown-value">Not active</p>
+</section>
+{% endif %}

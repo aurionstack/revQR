@@ -1749,6 +1749,8 @@ textarea::placeholder {
 .recent-orders { margin-top: 22px; padding-top: 16px; border-top: 1px dashed var(--line); }
 .recent-order-row { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; font-size: 13px; }
 .status-pill { font: 600 10px var(--mono); text-transform: uppercase; padding: 4px 7px; border-radius: 999px; background: var(--paper-deep); }
+.subscription-countdown { margin: 0 0 20px; }
+.subscription-countdown-value { margin: 6px 0; font: 700 clamp(20px, 4vw, 30px)/1.15 var(--mono); color: var(--ink); }
 .subscription-shell { max-width: 900px; margin: 0 auto; padding: 28px; }
 .subscription-heading { text-align: center; max-width: 560px; margin: 0 auto 24px; }
 .subscription-heading h2 { font-size: 27px; margin: 7px 0; }

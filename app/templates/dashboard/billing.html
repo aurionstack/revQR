@@ -3,6 +3,7 @@
 {% block dash_content %}
 <div class="dash-header"><h1 class="dash-title">Billing &amp; receipts</h1><p class="dash-subtitle">Subscription, AI allowance and purchase history</p></div>
 {% if pending %}<p class="security-alert" role="status">Your payment is being checked. Do not pay again yet. Use “Check payment” below; captured payments are also activated by webhook.</p>{% endif %}
+{% include "components/subscription_countdown.html" %}
 <section class="source-attribution billing-card">
   <p><b>Paid access:</b> {{ 'Active' if business.has_active_subscription else 'Not active' }}</p>
   <p><b>Expiry:</b> {{ business.subscription_expires_at | local_time('%d %b %Y') if business.subscription_expires_at else 'No dated subscription' }}</p>

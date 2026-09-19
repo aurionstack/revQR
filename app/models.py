@@ -30,7 +30,7 @@ class Business(Base):
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     qr_revoked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)  # admin bypasses payment
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     has_paid: Mapped[bool] = mapped_column(Boolean, default=False)  # unlocks QR generation
     totp_secret: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -71,13 +71,11 @@ class Business(Base):
 
     @property
     def has_qr_access(self) -> bool:
-        return self.is_active and not self.qr_revoked and self.has_active_subscription
+        return bool(self.is_active is not False and not self.qr_revoked and self.has_active_subscription)
 
     @property
     def has_active_subscription(self) -> bool:
         """Return whether paid features are currently available."""
-        if self.is_admin:
-            return True
         if not self.has_paid:
             return False
         # Existing lifetime purchases remain grandfathered.

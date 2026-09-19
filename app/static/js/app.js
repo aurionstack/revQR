@@ -516,6 +516,26 @@
     }, document.getElementById("standPayBtn"));
   };
 
+  function updateSubscriptionCountdowns() {
+    document.querySelectorAll("[data-subscription-expiry]").forEach(function (card) {
+      var output = card.querySelector("[data-countdown-value]");
+      var expires = new Date(card.dataset.subscriptionExpiry).getTime();
+      if (!output || !Number.isFinite(expires)) return;
+      var remaining = Math.max(0, expires - Date.now());
+      if (remaining === 0) {
+        output.textContent = "Expired — renew to restore QR access";
+        return;
+      }
+      var minutes = Math.floor(remaining / 60000);
+      var days = Math.floor(minutes / 1440);
+      var hours = Math.floor((minutes % 1440) / 60);
+      var mins = minutes % 60;
+      output.textContent = days + " days · " + hours + " hours · " + mins + " minutes";
+    });
+  }
+  updateSubscriptionCountdowns();
+  window.setInterval(updateSubscriptionCountdowns, 60000);
+
 
   /* ────────────────────────────────────────────────────────────────────────
      Dashboard: Mobile Nav Toggle
