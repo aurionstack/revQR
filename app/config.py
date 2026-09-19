@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     SUPPORT_EMAIL: str = "support@revqr.tech"
     SUPPORT_PHONE: str = "+919322974288"
     LEGAL_BUSINESS_NAME: str = "Aurion Stack"
-    BUSINESS_ADDRESS: str = "Mapusa, Goa 403510, India (service location)"
-    GRIEVANCE_CONTACT_NAME: str = ""
+    BUSINESS_ADDRESS: str = "68/2, Freitas Waddo, Verla, Mapusa, Goa 403510, India"
+    GRIEVANCE_CONTACT_NAME: str = "Samir Manigar"
     POLICIES_APPROVED: bool = False
     SHIPPING_ESTIMATE: str = "Approximately 7 business days from order confirmation, subject to production and courier availability."
     REFUND_POLICY: str = ""

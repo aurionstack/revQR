@@ -6,9 +6,9 @@ courier, monitoring or backup services. New checkout is closed by default.
 ## Operator details and policies
 
 Aurion Stack is a trading name, not a claim of company registration. Contact:
-support@revqr.tech, +91 9322974288, Mapusa, Goa 403510, India.
-Confirm the operator's full postal address and named grievance contact; review
-the privacy, terms, refunds and shipping pages with a qualified adviser.
+support@revqr.tech, +91 9322974288, 68/2, Freitas Waddo, Verla, Mapusa,
+Goa 403510, India. Grievance contact: Samir Manigar. Review the privacy, terms,
+refunds and shipping pages with a qualified adviser.
 Confirm tax obligations before issuing tax invoices. Current receipts explicitly
 are not GST invoices. Set POLICIES_APPROVED only after this review.
 
