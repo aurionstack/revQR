@@ -20,3 +20,4 @@ razorpay
 pyotp
 redis>=5,<8
 sentry-sdk[fastapi]>=2,<3
+newrelic==13.5.0

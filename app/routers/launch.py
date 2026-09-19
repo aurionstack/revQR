@@ -29,7 +29,7 @@ def launch_checks():
         "Support contact": bool(settings.SUPPORT_EMAIL and settings.SUPPORT_PHONE),
         "Email delivery configuration": bool(settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD),
         "Shared IP rate-limit storage": settings.RATE_LIMIT_STORAGE_URI != "memory://",
-        "Error-monitoring configuration": bool(settings.SENTRY_DSN),
+        "Error-monitoring configuration": bool(settings.SENTRY_DSN or settings.NEW_RELIC_LICENSE_KEY),
         "Public checkout enabled": settings.PUBLIC_CHECKOUT_ENABLED,
         "Physical fulfilment enabled": settings.PHYSICAL_STANDS_ENABLED,
     }

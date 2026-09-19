@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     AI_GLOBAL_DAILY_CALL_LIMIT: int = 3000
     AI_GLOBAL_DAILY_TOKEN_BUDGET: int = 2_000_000
     SENTRY_DSN: str = ""
+    NEW_RELIC_LICENSE_KEY: str = ""
+    NEW_RELIC_APP_NAME: str = "revQR Production"
 
     @property
     def cookie_secure(self) -> bool:
