@@ -70,3 +70,6 @@ async def test_standee_uses_single_fixed_four_by_six_format(
     assert "selectStandeeTheme('graphite'" in response.text
     assert "Leave blank for the clean counter" in response.text
     assert 'class="standee-footer"' in response.text
+    assert 'src="/static/revqr-logo-concept-v2.png"' in response.text
+    assert 'class="standee-brand-logo"' in response.text
+    assert '<div class="standee-url">revQR</div>' not in response.text
