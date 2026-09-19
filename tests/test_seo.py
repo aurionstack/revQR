@@ -32,7 +32,7 @@ def test_homepage_has_complete_search_and_social_metadata(client):
     types = {entry["@type"] for entry in structured["@graph"]}
     assert {"Organization", "WebSite", "SoftwareApplication"}.issubset(types)
     software = next(entry for entry in structured["@graph"] if entry["@type"] == "SoftwareApplication")
-    assert {offer["price"] for offer in software["offers"]} == {"999", "1599"}
+    assert {offer["price"] for offer in software["offers"]} == {"1599", "2499"}
 
 
 @pytest.mark.parametrize(

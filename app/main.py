@@ -245,9 +245,9 @@ async def features(request: Request):
 
 @app.get("/pricing", response_class=HTMLResponse, tags=["public"])
 async def pricing(request: Request):
-    title = "revQR Pricing — Google Review QR Codes from ₹999/year"
+    title = "revQR Pricing — Google Review QR Codes from ₹1,599/year"
     description = (
-        "Choose one year for ₹999 or two years for ₹1,599, with unlimited scans, "
+        "Choose one year for ₹1,599 or two years for ₹2,499, with unlimited scans, "
         "AI-assisted drafts, analytics, and QR downloads."
     )
     return templates.TemplateResponse(request, "landing/pricing.html", {

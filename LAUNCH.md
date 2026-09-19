@@ -12,7 +12,7 @@ the privacy, terms, refunds and shipping pages with a qualified adviser.
 Confirm tax obligations before issuing tax invoices. Current receipts explicitly
 are not GST invoices. Set POLICIES_APPROVED only after this review.
 
-Draft commercial terms: INR 999/year; INR 1,599/two years (INR 399 saving
+Draft commercial terms: INR 1,599/year; INR 2,499/two years (INR 699 saving
 against two annual purchases); INR 249 per physical stand, shipping included.
 First subscription purchases have a seven-calendar-day refund request window.
 Defective/incorrect stands have replacement/refund support; statutory rights

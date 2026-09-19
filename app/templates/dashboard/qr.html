@@ -137,11 +137,11 @@ document.getElementById("standQuantity").addEventListener("input", function () {
   <div class="plan-grid">
     {% for plan in plans %}
     <article class="plan-card {{ 'featured' if plan.code == 'two_year' else '' }}">
-      {% if plan.code == 'two_year' %}<span class="plan-badge">Best value · save ₹399</span>{% endif %}
+      {% if plan.code == 'two_year' %}<span class="plan-badge">Best value · save ₹699</span>{% endif %}
       <p class="eyebrow">{{ plan.name }}</p>
       <div class="plan-price"><span>₹</span>{{ plan.price_rupees }}</div>
       <p class="plan-period">₹{{ plan.monthly_rupees }}/month equivalent</p>
-      {% if plan.code == 'two_year' %}<p class="plan-saving">20% less than buying two annual plans</p>{% else %}<p class="plan-saving">A simple annual subscription</p>{% endif %}
+      {% if plan.code == 'two_year' %}<p class="plan-saving">approximately 22% less than buying two annual plans</p>{% else %}<p class="plan-saving">A simple annual subscription</p>{% endif %}
       <ul class="paywall-features">
         <li>Branded, trackable QR codes</li><li>Unlimited scans and AI drafts</li><li>Dashboard analytics</li><li>PNG, SVG, and standee downloads</li>
       </ul>

@@ -85,8 +85,8 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_PREVIOUS_SECRET: str = ""
     PUBLIC_CHECKOUT_ENABLED: bool = False
     LIVE_PAYMENT_TEST_EMAIL: str = ""
-    ANNUAL_PRICE_PAISE: int = 99900
-    TWO_YEAR_PRICE_PAISE: int = 159900
+    ANNUAL_PRICE_PAISE: int = 159900
+    TWO_YEAR_PRICE_PAISE: int = 249900
     PHYSICAL_STAND_PRICE_PAISE: int = 24900
 
     # Rate Limiting (AI endpoint)

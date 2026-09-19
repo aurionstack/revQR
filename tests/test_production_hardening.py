@@ -32,8 +32,8 @@ def make_business(**overrides):
 def test_server_owned_plan_prices_and_discount():
     annual = get_plan("annual")
     two_year = get_plan("two_year")
-    assert annual["amount"] == 99900
-    assert two_year["amount"] == 159900
+    assert annual["amount"] == 159900
+    assert two_year["amount"] == 249900
     assert len(public_plans()) == 2
     assert get_plan("invalid") is None
 

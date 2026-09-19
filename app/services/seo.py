@@ -4,7 +4,7 @@ import json
 PUBLIC_PAGES = (
     ("/", "Google Review QR Code & AI Review Assistant | revQR"),
     ("/features", "Google Review QR Code Features for Local Businesses | revQR"),
-    ("/pricing", "revQR Pricing — Google Review QR Codes from ₹999/year"),
+    ("/pricing", "revQR Pricing — Google Review QR Codes from ₹1,599/year"),
     ("/about", "About RevQR — Aurion Stack"),
 )
 PUBLIC_CONTENT_LAST_MODIFIED = "2026-09-18"
@@ -70,7 +70,7 @@ def _software_application(origin: str) -> dict:
                 "@type": "Offer",
                 "name": "revQR 1 Year",
                 "url": f"{origin}/pricing",
-                "price": "999",
+                "price": "1599",
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock",
             },
@@ -78,7 +78,7 @@ def _software_application(origin: str) -> dict:
                 "@type": "Offer",
                 "name": "revQR 2 Years",
                 "url": f"{origin}/pricing",
-                "price": "1599",
+                "price": "2499",
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock",
             },

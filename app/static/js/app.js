@@ -401,7 +401,7 @@
       options = {
         key: "rzp_test_...",
         order_id: "order_...",
-        amount: 99900,
+        amount: 159900,
         currency: "INR",
         name: "revQR",
         description: "QR Code Generation",
