@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.config import settings
 from app.models import Payment, Business, WebhookEvent
-from app.services.operations import queue_notification, audit
+from app.services.operations import queue_notification, audit, send_queued_notification
 from app.services.plans import add_months, get_plan
 
 
@@ -37,6 +37,17 @@ logger = logging.getLogger(__name__)
 
 class RetryableWebhookError(RuntimeError):
     pass
+
+
+async def _deliver_receipt(payment: Payment, db: AsyncSession) -> None:
+    """Best-effort immediate delivery; the durable outbox remains the fallback."""
+    if not payment.entitlement_applied:
+        return
+    try:
+        await send_queued_notification(db, f"receipt:{payment.id}")
+    except Exception as exc:
+        await db.rollback()
+        logger.warning("Immediate receipt delivery failed (%s)", type(exc).__name__)
 
 
 async def reconcile_order(order_id: str, db: AsyncSession, business_id=None):
@@ -66,6 +77,7 @@ async def reconcile_order(order_id: str, db: AsyncSession, business_id=None):
             await _activate(payment,entity,db)
     payment.last_checked_at=datetime.now(timezone.utc)
     await db.commit()
+    await _deliver_receipt(payment, db)
     return payment.entitlement_applied
 
 
@@ -105,25 +117,18 @@ async def create_order(
     """
     if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
         raise PaymentConfigurationError("Online payments are temporarily unavailable.")
-    test_purchase = False
-    if settings.LIVE_PAYMENT_TEST_EMAIL and purpose == "subscription" and plan_code == "annual":
-        business = await db.get(Business, business_id if isinstance(business_id, uuid.UUID) else uuid.UUID(str(business_id)))
-        test_purchase = bool(business and business.is_admin and business.email_verified
-            and business.email.lower() == settings.LIVE_PAYMENT_TEST_EMAIL.lower())
-    if (not settings.RAZORPAY_WEBHOOK_SECRET or
-            (not test_purchase and (not settings.PUBLIC_CHECKOUT_ENABLED or not settings.POLICIES_APPROVED))):
+    if (not settings.RAZORPAY_WEBHOOK_SECRET or not settings.PUBLIC_CHECKOUT_ENABLED
+            or not settings.POLICIES_APPROVED):
         raise PaymentConfigurationError("Checkout is not open yet. Please contact support.")
 
     if purpose == "subscription":
         plan = get_plan(plan_code)
         if not plan:
             raise ValueError("Select a valid subscription plan.")
-        amount = 100 if test_purchase else int(plan["amount"])
+        amount = int(plan["amount"])
         quantity = 1
         shipping_values = {}
         description = f"revQR {plan['name']} subscription"
-        if test_purchase:
-            description = "RevQR annual subscription — INR 1 live payment test"
     elif purpose == "physical_stand":
         if not settings.PHYSICAL_STANDS_ENABLED or not settings.SHIPPING_ESTIMATE:
             raise PaymentConfigurationError("Physical stand ordering is not open yet.")
@@ -232,6 +237,7 @@ async def verify_payment(
         return False
     payment.razorpay_signature = razorpay_signature
     await db.commit()
+    await _deliver_receipt(payment, db)
     return True
 
 
@@ -353,6 +359,7 @@ async def handle_webhook(raw_body: bytes, signature: str, db: AsyncSession, even
         record = await db.get(WebhookEvent, identity)
         record.status = "processed"
         await db.commit()
+        await _deliver_receipt(payment, db)
         return True
     except Exception as exc:
         await db.rollback()

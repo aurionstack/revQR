@@ -20,6 +20,9 @@ def prevent_live_metadata_requests(monkeypatch):
     async def allow_budget(*args):
         return True
     monkeypatch.setattr("app.services.ai.reserve_provider_budget", allow_budget)
+    async def send_queued(*args):
+        return True
+    monkeypatch.setattr("app.services.razorpay.send_queued_notification", send_queued)
 
 @pytest.fixture(scope="function", autouse=True)
 async def setup_test_db(request):

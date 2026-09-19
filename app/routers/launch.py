@@ -30,14 +30,19 @@ def launch_checks():
         "Email delivery configuration": bool(settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD),
         "Shared IP rate-limit storage": settings.RATE_LIMIT_STORAGE_URI != "memory://",
         "Error-monitoring configuration": bool(settings.SENTRY_DSN),
-        "Checkout intentionally enabled": settings.PUBLIC_CHECKOUT_ENABLED,
+        "Public checkout enabled": settings.PUBLIC_CHECKOUT_ENABLED,
         "Physical fulfilment enabled": settings.PHYSICAL_STANDS_ENABLED,
     }
 
 
 @router.get("/dashboard/billing")
 async def billing_page(request: Request, business: Business = Depends(get_current_business), db: AsyncSession = Depends(get_db)):
-    orders = (await db.execute(select(Payment).where(Payment.business_id == business.id).order_by(desc(Payment.created_at)).limit(50))).scalars().all()
+    orders_query = select(Payment).where(Payment.business_id == business.id)
+    # Preserve the retired live-test transactions in the audit database while
+    # keeping them out of the customer's normal billing ledger.
+    if business.is_admin:
+        orders_query = orders_query.where(Payment.amount != 100)
+    orders = (await db.execute(orders_query.order_by(desc(Payment.created_at)).limit(50))).scalars().all()
     key=f"business:{business.id}:month:{datetime.now(timezone.utc):%Y-%m}"
     usage = await db.get(UsageCounter, key)
     return templates.TemplateResponse(request,"dashboard/billing.html",{

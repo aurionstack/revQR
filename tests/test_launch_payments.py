@@ -43,6 +43,39 @@ def webhook(event="payment.captured",kind="payment",entity=None):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("plan_code,expected_amount", [("annual", 159900), ("two_year", 249900)])
+async def test_public_checkout_uses_standard_prices(monkeypatch, db_session, test_business, plan_code, expected_amount):
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "rzp_live_public")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "secret-live")
+    monkeypatch.setattr(settings, "RAZORPAY_WEBHOOK_SECRET", "webhook-live")
+    monkeypatch.setattr(settings, "PUBLIC_CHECKOUT_ENABLED", True)
+    monkeypatch.setattr(settings, "POLICIES_APPROVED", True)
+    monkeypatch.setattr(settings, "ANNUAL_PRICE_PAISE", 159900)
+    monkeypatch.setattr(settings, "TWO_YEAR_PRICE_PAISE", 249900)
+    create = Mock(side_effect=lambda data: {
+        "id": f"order_{plan_code}", "amount": data["amount"], "currency": data["currency"],
+    })
+    monkeypatch.setattr(service.client.order, "create", create)
+
+    result = await service.create_order(test_business.id, db_session, plan_code=plan_code)
+
+    assert result["amount"] == expected_amount
+    assert create.call_args.kwargs["data"]["amount"] == expected_amount
+
+
+@pytest.mark.asyncio
+async def test_checkout_requires_public_launch_gates(monkeypatch, db_session, test_business):
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "rzp_live_public")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "secret-live")
+    monkeypatch.setattr(settings, "RAZORPAY_WEBHOOK_SECRET", "webhook-live")
+    monkeypatch.setattr(settings, "PUBLIC_CHECKOUT_ENABLED", False)
+    monkeypatch.setattr(settings, "POLICIES_APPROVED", True)
+
+    with pytest.raises(service.PaymentConfigurationError):
+        await service.create_order(test_business.id, db_session, plan_code="annual")
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("change",[{"status":"authorized"},{"amount":1},{"currency":"USD"},{"order_id":"other-order"},{"amount_refunded":99900}])
 async def test_callback_never_activates_unconfirmed_purchase(change,provider,purchase,db_session,test_business):
     business_id = test_business.id
@@ -107,27 +140,3 @@ async def test_reconciliation_recovers_missing_browser_callback(provider,purchas
     assert await service.reconcile_order("order_launch_test",db_session,test_business.id)
     await db_session.refresh(purchase)
     assert purchase.status=="paid" and purchase.entitlement_applied
-
-
-@pytest.mark.asyncio
-async def test_live_one_rupee_checkout_is_restricted_to_verified_allowlisted_admin(monkeypatch,db_session,test_business):
-    monkeypatch.setattr(settings,"RAZORPAY_KEY_ID","rzp_live_test")
-    monkeypatch.setattr(settings,"RAZORPAY_KEY_SECRET","secret-test")
-    monkeypatch.setattr(settings,"RAZORPAY_WEBHOOK_SECRET","webhook-test")
-    monkeypatch.setattr(settings,"PUBLIC_CHECKOUT_ENABLED",False)
-    monkeypatch.setattr(settings,"POLICIES_APPROVED",False)
-    monkeypatch.setattr(settings,"LIVE_PAYMENT_TEST_EMAIL",test_business.email)
-    create=Mock(side_effect=lambda data:{"id":"order_one_rupee","amount":data['amount'],"currency":"INR"})
-    monkeypatch.setattr(service.client.order,"create",create)
-    with pytest.raises(service.PaymentConfigurationError):
-        await service.create_order(test_business.id,db_session,plan_code="annual")
-    test_business.is_admin=True
-    await db_session.commit()
-    result=await service.create_order(test_business.id,db_session,plan_code="annual")
-    assert result['amount']==100
-    with pytest.raises(service.PaymentConfigurationError):
-        await service.create_order(test_business.id,db_session,plan_code="two_year")
-    monkeypatch.setattr(settings,"LIVE_PAYMENT_TEST_EMAIL","another@example.com")
-    with pytest.raises(service.PaymentConfigurationError):
-        await service.create_order(test_business.id,db_session,plan_code="annual")
-    assert create.call_count==1
