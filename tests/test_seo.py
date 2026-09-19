@@ -94,16 +94,18 @@ def test_non_marketing_pages_are_noindex_and_not_cached(client):
 
 
 def test_social_and_brand_images_have_production_dimensions():
-    from PIL import Image
-
     static_dir = Path(__file__).parents[1] / "app" / "static"
-    with Image.open(static_dir / "og-revqr.png") as image:
-        assert image.format == "PNG"
-        assert image.size == (1200, 630)
+    logo_svg = (static_dir / "revqr-logo.svg").read_text(encoding="utf-8")
+    assert 'viewBox="0 0 220 58"' in logo_svg
+    assert "RevQR" in logo_svg
 
-    with Image.open(static_dir / "brand-icon.png") as image:
-        assert image.format == "PNG"
-        assert image.size == (512, 512)
+
+def test_all_product_logo_lockups_use_the_canonical_svg(client):
+    for path in ("/", "/login", "/signup"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert '/static/revqr-logo.svg' in response.text
+        assert 'revqr-logo-concept-v2.png' not in response.text
 
 
 def test_marketing_page_avoids_unused_application_javascript(client):
@@ -114,7 +116,7 @@ def test_marketing_page_avoids_unused_application_javascript(client):
 
 
 def test_static_assets_receive_long_lived_cache_headers(client):
-    response = client.get("/static/og-revqr.png")
+    response = client.get("/static/revqr-logo.svg")
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "public, max-age=31536000, immutable"

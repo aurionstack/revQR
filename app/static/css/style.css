@@ -1508,7 +1508,7 @@ textarea::placeholder {
 .hero-qr span { position:absolute; width:25px; height:25px; border:7px solid #111; background:#fff; }
 .hero-qr span:nth-child(1){left:3px;top:3px}.hero-qr span:nth-child(2){right:3px;top:3px}.hero-qr span:nth-child(3){left:3px;bottom:3px}.hero-qr span:nth-child(4){right:9px;bottom:9px;width:12px;height:12px;border-width:4px}
 .hero-stand small { display:block; color:var(--ink-soft); font-size:10px; margin-bottom:18px; }
-.hero-stand b { font:700 11px var(--mono); }
+.hero-stand-brand-logo { display:block; width:76px; height:auto; margin:0 auto; }
 .hero-phone {
   position:absolute;
   z-index:2;
@@ -2379,16 +2379,16 @@ textarea::placeholder {
   gap: 7px;
 }
 .standee-brand-lockup {
-  width: 112px;
-  min-height: 42px;
+  width: 120px;
+  min-height: 34px;
   display: grid;
   place-items: center;
 }
 .standee-brand-logo {
   display: block;
-  width: 104px;
+  width: 112px;
   height: auto;
-  max-height: 39px;
+  max-height: 30px;
   object-fit: contain;
 }
 .standee-badge {
