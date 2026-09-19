@@ -68,3 +68,5 @@ async def test_standee_uses_single_fixed_four_by_six_format(
     assert "Standee Color" in response.text
     assert "selectStandeeTheme('purple'" in response.text
     assert "selectStandeeTheme('graphite'" in response.text
+    assert "Leave blank for the clean counter" in response.text
+    assert 'class="standee-footer"' in response.text

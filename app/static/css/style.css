@@ -2155,7 +2155,6 @@ textarea::placeholder {
   width: 100%;
   background: var(--stand-accent);
 }
-.standee-card > .standee-accent:last-child { margin-top: auto; }
 .standee-header {
   padding: 14px 16px 0;
   display: flex;
@@ -2186,6 +2185,18 @@ textarea::placeholder {
   font-size: 16px;
   font-weight: 700;
   color: #1a1a1a;
+}
+.standee-tag {
+  display: none;
+  width: fit-content;
+  margin: -2px auto 0;
+  padding: 2px 9px;
+  border: 1px solid rgba(100, 116, 139, .24);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, .78);
+  color: #64748b;
+  font: 600 9px/1.35 var(--mono);
+  letter-spacing: .025em;
 }
 .standee-headline {
   padding: 10px 18px;
@@ -2242,12 +2253,15 @@ textarea::placeholder {
   padding: 4px 18px;
   word-break: break-all;
 }
+.standee-footer {
+  margin-top: auto;
+  padding-bottom: 28px;
+}
 .standee-badge {
   font-family: var(--sans);
   font-size: 11px;
   color: #666;
-  /* Extra clearance keeps both footer marks visibly above the acrylic base. */
-  padding: 5px 0 46px;
+  padding: 5px 0 0;
   display: flex;
   align-items: center;
   justify-content: center;
