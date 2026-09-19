@@ -55,6 +55,9 @@ async def test_standee_uses_single_fixed_four_by_six_format(
     assert response.status_code == 200
     assert "4 × 6 inches" in response.text
     assert "1200 × 1800 px" in response.text
+    assert "Leave a quick review!" in response.text
+    assert "Takes less than 30 seconds" in response.text
+    assert "15-second review" not in response.text
     assert "A4 (Wall Poster)" not in response.text
     assert "A5 (Counter)" not in response.text
     assert "A6 (Table Tent)" not in response.text

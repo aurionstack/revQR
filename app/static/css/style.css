@@ -2186,15 +2186,15 @@ textarea::placeholder {
   text-align: center;
 }
 .standee-qr-frame {
-  width: 145px;
-  height: 145px;
+  width: 150px;
+  height: 150px;
   margin-inline: auto;
   display: grid;
   place-items: center;
 }
 .standee-qr img {
-  width: 145px;
-  height: 145px;
+  width: 150px;
+  height: 150px;
   display: block;
   margin: 0 !important;
   justify-self: center;
@@ -2220,7 +2220,8 @@ textarea::placeholder {
   font-family: var(--sans);
   font-size: 11px;
   color: #666;
-  padding: 5px 0 9px;
+  /* Roughly 4 mm of clear space above the acrylic holder's bottom base. */
+  padding: 5px 0 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2547,7 +2548,7 @@ textarea::placeholder {
   .standee-controls { padding: 2px 0; min-width: 0; }
   .standee-control-group .wa-input { width: 100%; }
   .standee-qr-frame,
-  .standee-qr img { width: 145px; height: 145px; }
+  .standee-qr img { width: 150px; height: 150px; }
 
   /* WhatsApp tools */
   .wa-template-card { padding: 17px 15px; }
