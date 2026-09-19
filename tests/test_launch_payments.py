@@ -140,3 +140,14 @@ async def test_reconciliation_recovers_missing_browser_callback(provider,purchas
     assert await service.reconcile_order("order_launch_test",db_session,test_business.id)
     await db_session.refresh(purchase)
     assert purchase.status=="paid" and purchase.entitlement_applied
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_is_repeatable_after_receipt_is_already_sent(
+    provider, purchase, db_session, test_business
+):
+    assert await service.reconcile_order("order_launch_test", db_session, test_business.id)
+    # A later maintenance pass finds no pending receipt and rolls back its
+    # outbox lookup. The reconciliation result must not access expired ORM
+    # state after that rollback.
+    assert await service.reconcile_order("order_launch_test", db_session, test_business.id)

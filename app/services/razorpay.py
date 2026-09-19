@@ -76,9 +76,14 @@ async def reconcile_order(order_id: str, db: AsyncSession, business_id=None):
         elif entity.get("status")=="captured" and not payment.billing_review_required:
             await _activate(payment,entity,db)
     payment.last_checked_at=datetime.now(timezone.utc)
+    # Keep the return value before attempting immediate delivery.  The outbox
+    # helper deliberately rolls the transaction back when the receipt was
+    # already sent; that rollback expires ORM attributes and accessing the
+    # payment afterwards can trigger async SQLAlchemy's MissingGreenlet error.
+    entitlement_applied = payment.entitlement_applied
     await db.commit()
     await _deliver_receipt(payment, db)
-    return payment.entitlement_applied
+    return entitlement_applied
 
 
 class PaymentConfigurationError(RuntimeError):
