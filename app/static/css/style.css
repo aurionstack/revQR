@@ -2116,6 +2116,10 @@ textarea::placeholder {
 }
 
 .standee-card {
+  --stand-accent: #6366f1;
+  --stand-glow-one: rgba(99, 102, 241, .16);
+  --stand-glow-two: rgba(96, 165, 250, .14);
+  --stand-wash: rgba(245, 243, 255, .82);
   width: 320px;
   aspect-ratio: 2 / 3;
   position: relative;
@@ -2136,9 +2140,9 @@ textarea::placeholder {
   height: 190px;
   pointer-events: none;
   background:
-    radial-gradient(circle at 0 0, rgba(99, 102, 241, .16), transparent 52%),
-    radial-gradient(circle at 100% 6%, rgba(96, 165, 250, .14), transparent 48%),
-    linear-gradient(180deg, rgba(245, 243, 255, .82), rgba(255, 255, 255, 0));
+    radial-gradient(circle at 0 0, var(--stand-glow-one), transparent 52%),
+    radial-gradient(circle at 100% 6%, var(--stand-glow-two), transparent 48%),
+    linear-gradient(180deg, var(--stand-wash), rgba(255, 255, 255, 0));
 }
 .standee-card > * {
   position: relative;
@@ -2149,6 +2153,7 @@ textarea::placeholder {
   height: 5px;
   flex: 0 0 5px;
   width: 100%;
+  background: var(--stand-accent);
 }
 .standee-card > .standee-accent:last-child { margin-top: auto; }
 .standee-header {
@@ -2281,6 +2286,27 @@ textarea::placeholder {
   color: var(--ink-soft);
   font: 11px/1.45 var(--mono);
 }
+.standee-theme-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin-top: 9px;
+}
+.standee-theme-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 3px solid var(--paper);
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: pointer;
+}
+.standee-theme-btn.active {
+  box-shadow: 0 0 0 2px var(--ink);
+  transform: scale(1.06);
+}
+.standee-theme-btn:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 3px; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════

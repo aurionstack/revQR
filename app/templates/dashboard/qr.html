@@ -58,23 +58,10 @@
   </section>
 
   <aside class="stand-order-card">
-    <p class="eyebrow">Physical QR stand</p>
-    <h2>Delivered ready to display</h2>
-    <p class="stand-order-price">₹{{ stand_price }} <span>per item</span></p>
-    <p class="form-hint">A durable printed counter stand using your current business branding. Shipping is included.</p>
-    {% if launch_config.PHYSICAL_STANDS_ENABLED %}
-    <form id="standOrderForm" onsubmit="startStandPayment(event)">
-      <div class="stand-quantity-row">
-        <label class="form-label" for="standQuantity">Quantity</label>
-        <input class="form-input" id="standQuantity" type="number" min="1" max="20" value="1" required />
-      </div>
-      <input class="form-input" id="shippingName" type="text" maxlength="255" placeholder="Recipient name" autocomplete="name" required />
-      <input class="form-input" id="shippingPhone" type="tel" maxlength="20" placeholder="10-digit phone" autocomplete="tel" required />
-      <textarea class="form-input" id="shippingAddress" rows="3" maxlength="1000" placeholder="Complete delivery address" autocomplete="street-address" required></textarea>
-      <input class="form-input" id="shippingPostalCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit PIN code" autocomplete="postal-code" required />
-      <button class="btn btn-primary" id="standPayBtn" type="submit">Order stand · ₹{{ stand_price }}</button>
-    </form>
-    {% else %}<p class="security-alert">Physical stand ordering is not open yet. Digital standee downloads remain available.</p>{% endif %}
+    <p class="eyebrow">Physical QR stand · Coming soon</p>
+    <h2>4 × 6 acrylic tabletop stand</h2>
+    <p class="form-hint">We are preparing the printed-and-delivered option. For now, customize and download the exact print-ready insert at no additional charge.</p>
+    <a href="/dashboard/standee" class="btn btn-secondary qr-standee-link">Customize the 4 × 6 insert →</a>
     {% if stand_orders %}
     <div class="recent-orders">
       <p class="chip-label">Recent orders</p>
@@ -115,10 +102,6 @@ function updateCustomQR() {
   document.getElementById("qrUrlDisplay").textContent = `${qrAppUrl}/review/${qrBusinessSlug}${source ? `?${reviewQuery}` : ""}`;
   document.getElementById("qrMetaLine").textContent = `${qrBusinessName} · ${qrBusinessSlug.toUpperCase()}${value ? ` · ${value.toUpperCase()}` : ""}`;
 }
-document.getElementById("standQuantity").addEventListener("input", function () {
-  const quantity = Math.max(1, Math.min(20, Number(this.value) || 1));
-  document.getElementById("standPayBtn").textContent = `Order ${quantity === 1 ? "stand" : `${quantity} stands`} · ₹${quantity * {{ stand_price }}}`;
-});
 </script>
 {% else %}
 <section class="subscription-shell">

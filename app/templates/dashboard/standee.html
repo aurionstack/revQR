@@ -16,7 +16,7 @@
   <div class="standee-preview-wrap">
     <div class="standee-card" id="standeeCard" aria-label="4 by 6 inch portrait stand insert preview">
       <!-- Top accent bar -->
-      <div class="standee-accent" style="background:{{ business.brand_color or '#6366f1' }};"></div>
+      <div class="standee-accent"></div>
 
       <!-- Logo & Name -->
       <div class="standee-header">
@@ -71,7 +71,7 @@
       </div>
 
       <!-- Bottom accent bar -->
-      <div class="standee-accent" style="background:{{ business.brand_color or '#6366f1' }};"></div>
+      <div class="standee-accent"></div>
     </div>
   </div>
 
@@ -88,6 +88,19 @@
       <label class="wa-label">Table / Counter / Location Tag (Optional)</label>
       <input type="text" id="standeeLocationInput" class="wa-input" placeholder="e.g. Table #01, Counter A, Desk 2" maxlength="30" oninput="updateStandeeLocation()" />
       <p class="hint" style="margin-top:4px;">Adds a physical label on the standee and tracks reviews per table/counter in your analytics.</p>
+    </div>
+
+    <div class="standee-control-group">
+      <label class="wa-label">Standee Color</label>
+      <div class="standee-theme-picker" role="group" aria-label="Choose standee gradient and accent color">
+        <button type="button" class="standee-theme-btn active" style="--swatch:#6366f1" aria-label="Purple theme" aria-pressed="true" onclick="selectStandeeTheme('purple', this)"></button>
+        <button type="button" class="standee-theme-btn" style="--swatch:#2563eb" aria-label="Blue theme" aria-pressed="false" onclick="selectStandeeTheme('blue', this)"></button>
+        <button type="button" class="standee-theme-btn" style="--swatch:#0f766e" aria-label="Teal theme" aria-pressed="false" onclick="selectStandeeTheme('teal', this)"></button>
+        <button type="button" class="standee-theme-btn" style="--swatch:#be123c" aria-label="Rose theme" aria-pressed="false" onclick="selectStandeeTheme('rose', this)"></button>
+        <button type="button" class="standee-theme-btn" style="--swatch:#b45309" aria-label="Amber theme" aria-pressed="false" onclick="selectStandeeTheme('amber', this)"></button>
+        <button type="button" class="standee-theme-btn" style="--swatch:#334155" aria-label="Graphite theme" aria-pressed="false" onclick="selectStandeeTheme('graphite', this)"></button>
+      </div>
+      <p class="hint" style="margin-top:8px;">Updates the corner glow and both accent lines. The QR scanning area always stays white.</p>
     </div>
 
     <div class="standee-control-group standee-fixed-size">
@@ -124,6 +137,29 @@
 <script>
 (function() {
   var baseSlug = {{ business.slug | tojson }};
+  var standeeThemes = {
+    purple: { accent: '#6366f1', glowOne: 'rgba(99, 102, 241, .16)', glowTwo: 'rgba(96, 165, 250, .14)', wash: 'rgba(245, 243, 255, .82)' },
+    blue: { accent: '#2563eb', glowOne: 'rgba(37, 99, 235, .16)', glowTwo: 'rgba(14, 165, 233, .14)', wash: 'rgba(239, 246, 255, .84)' },
+    teal: { accent: '#0f766e', glowOne: 'rgba(15, 118, 110, .16)', glowTwo: 'rgba(45, 212, 191, .12)', wash: 'rgba(240, 253, 250, .84)' },
+    rose: { accent: '#be123c', glowOne: 'rgba(190, 18, 60, .14)', glowTwo: 'rgba(244, 114, 182, .12)', wash: 'rgba(255, 241, 242, .84)' },
+    amber: { accent: '#b45309', glowOne: 'rgba(180, 83, 9, .14)', glowTwo: 'rgba(251, 191, 36, .13)', wash: 'rgba(255, 251, 235, .86)' },
+    graphite: { accent: '#334155', glowOne: 'rgba(51, 65, 85, .14)', glowTwo: 'rgba(100, 116, 139, .12)', wash: 'rgba(248, 250, 252, .88)' }
+  };
+
+  window.selectStandeeTheme = function(name, button) {
+    var theme = standeeThemes[name] || standeeThemes.purple;
+    var card = document.getElementById('standeeCard');
+    if (!card) return;
+    card.style.setProperty('--stand-accent', theme.accent);
+    card.style.setProperty('--stand-glow-one', theme.glowOne);
+    card.style.setProperty('--stand-glow-two', theme.glowTwo);
+    card.style.setProperty('--stand-wash', theme.wash);
+    document.querySelectorAll('.standee-theme-btn').forEach(function(item) {
+      var active = item === button;
+      item.classList.toggle('active', active);
+      item.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  };
 
   window.updateStandeeHeadline = function() {
     var input = document.getElementById('standeeHeadlineInput');

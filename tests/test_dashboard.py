@@ -41,6 +41,9 @@ async def test_qr_page_unlocked(auth_client, test_business, db_session):
     response = auth_client.get("/dashboard/qr")
     assert response.status_code == 200
     assert "PNG" in response.text
+    assert "Physical QR stand · Coming soon" in response.text
+    assert "standOrderForm" not in response.text
+    assert "standPayBtn" not in response.text
 
 
 @pytest.mark.asyncio
@@ -62,3 +65,6 @@ async def test_standee_uses_single_fixed_four_by_six_format(
     assert "A5 (Counter)" not in response.text
     assert "A6 (Table Tent)" not in response.text
     assert "setStandeeSize" not in response.text
+    assert "Standee Color" in response.text
+    assert "selectStandeeTheme('purple'" in response.text
+    assert "selectStandeeTheme('graphite'" in response.text
