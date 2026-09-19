@@ -47,7 +47,7 @@
       data-google-url="{{ google_review_url or '' }}"
       onclick="postOnGoogle(this.dataset.googleUrl)"
     >
-      Copy &amp; Review on Google
+      Copy {{ rating }}★ Review &amp; Open Google
     </button>
   </div>
   <span class="copied-tag" id="copiedTag">✓ Copied</span>
@@ -55,10 +55,10 @@
     <p><b>Three quick steps</b></p>
     <ol>
       <li>Check your draft and edit anything that doesn't match your visit.</li>
-      <li>Tap <b>Copy &amp; Review on Google</b> — your review is copied automatically.</li>
-      <li>Sign in to Google, choose your stars, paste the text and tap <b>Post</b>.</li>
+      <li>Tap <b>Copy {{ rating }}★ Review &amp; Open Google</b> — your review text is copied automatically.</li>
+      <li>In Google, choose <b>{{ rating }} stars</b>, paste the copied text and tap <b>Post</b>.</li>
     </ol>
-    <p>Only you can publish your review. We never post it for you.</p>
+    <p>Google does not allow RevQR to preselect stars or fill its review box. Only you can publish your review; we never post it for you.</p>
   </div>
 
   <div class="private-link-row">

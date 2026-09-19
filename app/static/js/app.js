@@ -342,7 +342,13 @@
     }
     var button = document.getElementById("postBtn");
     if (button) button.disabled = true;
+    var ratingInput = document.querySelector('#screen-review .mini-stamp.on');
+    var ratingMatch = ratingInput ? ratingInput.textContent.match(/([1-5])★/) : null;
+    var selectedRating = ratingMatch ? ratingMatch[1] : "";
     copyPlainText(textarea.value.trim()).then(function () {
+      if (selectedRating) {
+        showToast("Copied — choose " + selectedRating + " stars in Google, then paste", "success", 5000);
+      }
       showCopiedFeedback();
       var reviewId = document.getElementById("review-id");
       var slug = document.getElementById("biz-slug");
