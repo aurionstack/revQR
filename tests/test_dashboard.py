@@ -73,5 +73,8 @@ async def test_standee_uses_single_fixed_four_by_six_format(
     assert 'class="standee-brand-logo"' in response.text
     assert 'role="img" aria-label="RevQR"' in response.text
     assert 'class="standee-brand-icon"' in response.text
-    assert '<span>RevQR</span>' in response.text
+    assert 'RevQR<span class="standee-brand-domain">.tech</span>' in response.text
+    assert 'class="wa-input standee-headline-editor"' in response.text
+    assert 'handleStandeeHeadlineKeydown(event)' in response.text
+    assert 'Shift + Enter' in response.text
     assert '<div class="standee-url">revQR</div>' not in response.text

@@ -70,7 +70,7 @@
                 <path d="m37 29 2.3 4.7 5.2.8-3.7 3.6.9 5.2-4.7-2.5-4.7 2.5.9-5.2-3.7-3.6 5.2-.8z"/>
               </g>
             </svg>
-            <span>RevQR</span>
+            <span class="standee-brand-wordmark">RevQR<span class="standee-brand-domain">.tech</span></span>
           </div>
         </div>
 
@@ -97,7 +97,9 @@
 
     <div class="standee-control-group">
       <label class="wa-label">Headline Text</label>
-      <input type="text" id="standeeHeadlineInput" class="wa-input" value="Loved your visit? Leave a quick review!" maxlength="80" oninput="updateStandeeHeadline()" />
+      <textarea id="standeeHeadlineInput" class="wa-input standee-headline-editor" rows="2" maxlength="80" onkeydown="handleStandeeHeadlineKeydown(event)" oninput="updateStandeeHeadline()">Loved your visit?
+Leave a quick review!</textarea>
+      <p class="hint" style="margin-top:6px;">Press <b>Shift + Enter</b> to move the headline to a second line. A maximum of two lines keeps the print layout balanced.</p>
     </div>
 
     <div class="standee-control-group">
@@ -181,8 +183,31 @@
     var input = document.getElementById('standeeHeadlineInput');
     var headline = document.getElementById('standeeHeadline');
     if (input && headline) {
+      var lines = input.value.replace(/\r/g, '').split('\n');
+      if (lines.length > 2) {
+        input.value = lines.slice(0, 2).join('\n');
+        showToast('The standee headline supports up to two lines.', 'error');
+      }
       headline.textContent = input.value;
     }
+  };
+
+  window.handleStandeeHeadlineKeydown = function(event) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    if (!event.shiftKey) return;
+
+    var input = event.currentTarget;
+    var before = input.value.slice(0, input.selectionStart);
+    var selected = input.value.slice(input.selectionStart, input.selectionEnd);
+    var after = input.value.slice(input.selectionEnd);
+    var nextValue = before + '\n' + after;
+    if (selected.indexOf('\n') === -1 && nextValue.split('\n').length > 2) {
+      showToast('The standee headline supports up to two lines.', 'error');
+      return;
+    }
+    input.setRangeText('\n', input.selectionStart, input.selectionEnd, 'end');
+    window.updateStandeeHeadline();
   };
 
   window.updateStandeeLocation = function() {

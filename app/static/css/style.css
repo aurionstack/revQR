@@ -2330,7 +2330,9 @@ textarea::placeholder {
   font-weight: 600;
   line-height: 1.32;
   color: #333;
+  white-space: pre-line;
 }
+.standee-headline-editor { min-height:76px; resize:vertical; line-height:1.4; }
 .standee-stars {
   font-size: 21px;
   letter-spacing: 3px;
@@ -2405,6 +2407,8 @@ textarea::placeholder {
   white-space: nowrap;
 }
 .standee-brand-icon { display:block; width:27px; height:27px; flex:0 0 27px; }
+.standee-brand-wordmark { display:inline-flex; align-items:baseline; }
+.standee-brand-domain { margin-left:1px; color:#64748b; font-size:10px; font-weight:600; letter-spacing:0; }
 .standee-badge {
   font-family: var(--sans);
   font-size: 11px;
