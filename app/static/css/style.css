@@ -1530,6 +1530,7 @@ textarea::placeholder {
 .hero-phone-chip-row span { padding:5px 7px; border:1px solid var(--accent); border-radius:99px; color:var(--accent-deep); font:600 8px var(--mono); }
 .hero-phone-draft { padding:11px; border:1px solid var(--line); border-radius:10px; color:var(--ink-soft); font-size:9px; line-height:1.55; background:#fff; }
 .hero-phone-action { margin-top:13px; padding:10px 8px; border-radius:9px; color:#fff; background:var(--ink); text-align:center; font:600 8px var(--mono); text-transform:uppercase; }
+.hero-sub-mobile { display:none; }
 
 .signup-next-steps,
 .ai-flow-disclosure { background:var(--paper-deep); border:1px solid var(--line); border-radius:12px; }
@@ -2823,22 +2824,17 @@ textarea::placeholder {
   .toast { width: calc(100% - 24px); bottom: max(14px, env(safe-area-inset-bottom)); }
 }
 
-/* Mobile hero: the product preview becomes a quiet background watermark so the
-   complete message and actions fit in one intentional first-screen composition. */
+/* Mobile hero: clean message first, then a compact product demonstration. */
 @media (max-width: 768px) {
   .landing-hero-product {
-    position: relative;
-    isolation: isolate;
-    display: flex;
-    min-height: 100svh;
-    padding: 84px 16px 34px;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    display: grid;
+    min-height: 0;
+    padding: 84px 16px 36px;
+    gap: 26px;
+    align-items: start;
+    overflow: visible;
   }
   .landing-hero-product .landing-hero-copy {
-    position: relative;
-    z-index: 2;
     width: 100%;
   }
   .landing-hero-product .eyebrow {
@@ -2849,8 +2845,8 @@ textarea::placeholder {
   .landing-hero-product .landing-hero-title {
     max-width: 560px;
     margin-bottom: 14px;
-    font-size: clamp(30px, 8.8vw, 36px);
-    line-height: 1.04;
+    font-size: clamp(28px, 8vw, 33px);
+    line-height: 1.07;
     overflow-wrap: normal;
   }
   .landing-hero-product .landing-hero-sub {
@@ -2859,6 +2855,8 @@ textarea::placeholder {
     font-size: 14px;
     line-height: 1.55;
   }
+  .landing-hero-product .hero-sub-desktop { display:none; }
+  .landing-hero-product .hero-sub-mobile { display:block; }
   .landing-hero-product .landing-hero-actions {
     gap: 10px;
   }
@@ -2867,23 +2865,20 @@ textarea::placeholder {
     padding: 12px 18px;
   }
   .landing-hero-product .hero-trust-line {
-    margin-top: 14px;
+    margin-top: 22px;
     font-size: 9px;
     line-height: 1.55;
   }
   .landing-hero-product .hero-product-scene {
-    position: absolute;
-    z-index: 0;
-    inset: 60px 0 0;
-    width: 100%;
-    height: auto;
-    min-height: 0;
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-    opacity: .13;
-    filter: saturate(.8) contrast(.88);
-    pointer-events: none;
+    position: relative;
+    width: min(100%, 390px);
+    min-height: 300px;
+    margin: 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
   }
   .landing-hero-product .hero-stand {
     left: 20px;
@@ -2969,10 +2964,12 @@ textarea::placeholder {
 
 @media (max-width: 480px) {
   .landing-hero-product {
-    padding: 78px 14px 28px;
+    padding: 76px 14px 28px;
+    gap: 24px;
   }
   .landing-hero-product .landing-hero-title {
-    font-size: clamp(29px, 9.6vw, 35px);
+    max-width: 340px;
+    font-size: clamp(28px, 8.5vw, 32px);
   }
   .landing-hero-product .landing-hero-sub {
     font-size: 13.5px;
