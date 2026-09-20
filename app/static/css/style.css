@@ -2823,12 +2823,23 @@ textarea::placeholder {
   .toast { width: calc(100% - 24px); bottom: max(14px, env(safe-area-inset-bottom)); }
 }
 
-/* Keep the mobile hero compact: the product preview should support the pitch,
-   not push most of the product below the first screen. Desktop is unchanged. */
+/* Mobile hero: the product preview becomes a quiet background watermark so the
+   complete message and actions fit in one intentional first-screen composition. */
 @media (max-width: 768px) {
   .landing-hero-product {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    min-height: 100svh;
     padding: 84px 16px 34px;
-    gap: 24px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .landing-hero-product .landing-hero-copy {
+    position: relative;
+    z-index: 2;
+    width: 100%;
   }
   .landing-hero-product .eyebrow {
     margin-bottom: 10px;
@@ -2861,10 +2872,18 @@ textarea::placeholder {
     line-height: 1.55;
   }
   .landing-hero-product .hero-product-scene {
-    width: min(100%, 390px);
-    min-height: 334px;
-    margin: 0 auto;
-    border-radius: 22px;
+    position: absolute;
+    z-index: 0;
+    inset: 60px 0 0;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    opacity: .13;
+    filter: saturate(.8) contrast(.88);
+    pointer-events: none;
   }
   .landing-hero-product .hero-stand {
     left: 20px;
@@ -2951,16 +2970,12 @@ textarea::placeholder {
 @media (max-width: 480px) {
   .landing-hero-product {
     padding: 78px 14px 28px;
-    gap: 20px;
   }
   .landing-hero-product .landing-hero-title {
     font-size: clamp(29px, 9.6vw, 35px);
   }
   .landing-hero-product .landing-hero-sub {
     font-size: 13.5px;
-  }
-  .landing-hero-product .hero-product-scene {
-    min-height: 300px;
   }
   .landing-hero-product .hero-stand {
     left: 14px;
