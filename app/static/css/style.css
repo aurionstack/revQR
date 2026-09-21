@@ -830,6 +830,25 @@ textarea::placeholder {
   color: var(--ink-faint);
   margin-top: 3px;
 }
+.dash-home-logo {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 12px;
+  text-decoration: none;
+}
+.dash-home-logo .revqr-brand-logo { width: 118px; }
+.dash-mobile-identity { min-width: 0; }
+.dash-mobile-identity .dash-home-logo { margin-bottom: 3px; }
+.dash-mobile-identity .dash-home-logo .revqr-brand-logo { width: 104px; }
+.dash-mobile-business {
+  max-width: 58vw;
+  overflow: hidden;
+  color: var(--ink-faint);
+  font: 600 9px var(--mono);
+  letter-spacing: .04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .dash-nav {
   flex: 1;
@@ -1798,7 +1817,15 @@ textarea::placeholder {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .qr-actions { flex-direction: column; }
   .qr-actions .btn { width: 100%; }
-  .landing-nav-links a:not(.btn-inline) { display: none; }
+  .landing-nav-links a:not(.btn-inline):not(.landing-login-link) { display: none; }
+  .landing-login-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 5px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
   .feature-summary-grid,
   .feature-detail-grid,
   .audience-section,

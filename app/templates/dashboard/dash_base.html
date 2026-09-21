@@ -11,9 +11,11 @@
 <!-- Mobile nav -->
 <div class="dash-mobile-nav">
   <div style="display:flex; align-items:center; justify-content:space-between;">
-    <div>
-      <div class="dash-brand-name">{{ business.name }}</div>
-      <div class="dash-brand-sub">Dashboard</div>
+    <div class="dash-mobile-identity">
+      <a href="/" class="dash-home-logo" aria-label="RevQR homepage">
+        {% include "components/revqr_logo.html" %}
+      </a>
+      <div class="dash-mobile-business">{{ business.name }}</div>
     </div>
     <button class="dash-mobile-toggle" id="dashMobileToggle" type="button" aria-controls="dashMobileMenu" aria-expanded="false">
       <span>☰</span> Menu
@@ -26,6 +28,9 @@
   <div class="dash-mobile-menu-inner" role="dialog" aria-modal="true" aria-label="Dashboard navigation">
     <button class="dash-mobile-close" id="dashMobileClose" type="button" aria-label="Close navigation">×</button>
     <div class="dash-brand" style="margin-bottom:16px;">
+      <a href="/" class="dash-home-logo" aria-label="RevQR homepage">
+        {% include "components/revqr_logo.html" %}
+      </a>
       <div class="dash-brand-name">{{ business.name }}</div>
       <div class="dash-brand-sub">Dashboard</div>
     </div>
@@ -81,6 +86,9 @@
   <!-- Sidebar -->
   <aside class="dash-sidebar">
     <div class="dash-brand">
+      <a href="/" class="dash-home-logo" aria-label="RevQR homepage">
+        {% include "components/revqr_logo.html" %}
+      </a>
       <div class="dash-brand-name">{{ business.name }}</div>
       <div class="dash-brand-sub">Dashboard</div>
     </div>

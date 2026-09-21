@@ -37,6 +37,7 @@ def test_homepage_has_complete_search_and_social_metadata(client):
     assert "Google-compliant" not in html
     assert "Try the Customer Experience" in html
     assert response.headers["cache-control"] == "public, max-age=60, must-revalidate"
+    assert 'href="/login" class="landing-login-link"' in html
 
 
 def test_signup_is_low_friction_and_uses_current_brand(client):

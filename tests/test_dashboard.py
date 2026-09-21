@@ -22,6 +22,8 @@ async def test_dashboard_authenticated(auth_client):
     response = auth_client.get("/dashboard")
     assert response.status_code == 200
     assert "QR Code" in response.text
+    assert 'href="/" class="dash-home-logo"' in response.text
+    assert '/static/revqr-logo.svg' in response.text
 
 @pytest.mark.asyncio
 async def test_qr_page_locked(auth_client):

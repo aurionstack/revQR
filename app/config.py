@@ -27,8 +27,10 @@ class Settings(BaseSettings):
     # JWT Authentication
     JWT_SECRET_KEY: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRATION_MINUTES: int = 60 * 24 * 7  # 7 days
-    ADMIN_SESSION_MINUTES: int = 60
+    # Customer sessions are deliberately persistent across return visits.
+    # Admin sessions stay much shorter because they expose cross-account tools.
+    JWT_EXPIRATION_MINUTES: int = 60 * 24 * 30  # 30 days
+    ADMIN_SESSION_MINUTES: int = 60 * 12  # 12 hours
 
     # App
     APP_URL: str = "http://localhost:8000"

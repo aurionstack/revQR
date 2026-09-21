@@ -59,6 +59,8 @@ async def test_login(client, test_business):
     # Check if cookie is set
     from app.services.auth import cookie_name
     assert cookie_name("access_token") in response.cookies
+    cookie_header = response.headers.get("set-cookie", "").lower()
+    assert "max-age=2592000" in cookie_header
 
 @pytest.mark.asyncio
 async def test_login_invalid_password(client, test_business):
