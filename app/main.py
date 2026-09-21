@@ -234,7 +234,7 @@ async def features(request: Request):
     title = "Google Review QR Code Features for Local Businesses | revQR"
     description = (
         "Branded QR codes, relevant AI-assisted drafts, source tracking, analytics, "
-        "private feedback, and downloadable standees."
+        "source analytics, and downloadable standees."
     )
     return templates.TemplateResponse(request, "landing/features.html", {
         "site_url": site_url(settings.APP_URL),

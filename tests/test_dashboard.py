@@ -24,6 +24,8 @@ async def test_dashboard_authenticated(auth_client):
     assert "QR Code" in response.text
     assert 'href="/" class="dash-home-logo"' in response.text
     assert '/static/revqr-logo.svg' in response.text
+    assert "Private Notes" not in response.text
+    assert "Google Opens" in response.text
 
 @pytest.mark.asyncio
 async def test_qr_page_locked(auth_client):

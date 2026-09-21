@@ -15,7 +15,7 @@ from sqlalchemy.future import select
 from sqlalchemy import func, desc
 
 from app.database import get_db
-from app.models import Business, BusinessAsset, Scan, Review, Feedback, Payment
+from app.models import Business, BusinessAsset, Scan, Review, Payment
 from app.services.auth import get_current_business, verify_password
 from app.services.assets import LogoValidationError, normalize_logo
 from app.services.business_context import import_business_context
@@ -59,9 +59,13 @@ async def dashboard_home(
     avg_rating_res = await db.execute(select(func.avg(Review.rating)).filter(Review.business_id == business.id))
     average_rating = avg_rating_res.scalar()
 
-    # Total Feedback (Private Notes)
-    feedback_res = await db.execute(select(func.count(Feedback.id)).filter(Feedback.business_id == business.id))
-    total_feedback = feedback_res.scalar() or 0
+    redirected_res = await db.execute(
+        select(func.count(Review.id)).filter(
+            Review.business_id == business.id,
+            Review.redirected == True,
+        )
+    )
+    total_redirected = redirected_res.scalar() or 0
 
     conversion_rate = (total_copied / total_scans * 100) if total_scans > 0 else 0
 
@@ -71,7 +75,7 @@ async def dashboard_home(
         "total_copied": total_copied,
         "conversion_rate": conversion_rate,
         "average_rating": average_rating,
-        "total_feedback": total_feedback,
+        "total_redirected": total_redirected,
     }
 
     # 2. Chart Data (Last 7 Days Scans)
@@ -133,37 +137,21 @@ async def dashboard_home(
 @router.get("/reviews", response_class=HTMLResponse)
 async def dashboard_reviews(
     request: Request,
-    tab: str = "",
     business: Business = Depends(get_current_business),
     db: AsyncSession = Depends(get_db)
 ):
     reviews_res = await db.execute(select(func.count(Review.id)).filter(Review.business_id == business.id))
     total_reviews = reviews_res.scalar() or 0
 
-    feedback_res = await db.execute(select(func.count(Feedback.id)).filter(Feedback.business_id == business.id))
-    total_feedback = feedback_res.scalar() or 0
-
-    reviews = []
-    feedback_items = []
-
-    if tab == "feedback":
-        fb_query = await db.execute(
-            select(Feedback).filter(Feedback.business_id == business.id).order_by(desc(Feedback.created_at))
-        )
-        feedback_items = fb_query.scalars().all()
-    else:
-        rev_query = await db.execute(
-            select(Review).filter(Review.business_id == business.id).order_by(desc(Review.created_at))
-        )
-        reviews = rev_query.scalars().all()
+    rev_query = await db.execute(
+        select(Review).filter(Review.business_id == business.id).order_by(desc(Review.created_at))
+    )
+    reviews = rev_query.scalars().all()
 
     return templates.TemplateResponse(request, "dashboard/reviews.html", {
         "business": business,
-        "tab": tab,
         "total_reviews": total_reviews,
-        "total_feedback": total_feedback,
         "reviews": reviews,
-        "feedback_items": feedback_items,
     })
 
 

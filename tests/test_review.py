@@ -62,6 +62,7 @@ async def test_review_generate(mock_generate_review, client, test_business, test
     
     assert response.status_code == 200
     assert "This is a mocked AI generated review." in response.text
+    assert "private note" not in response.text.lower()
     
     # Verify the Review was saved in DB
     res = await db_session.execute(select(Review).filter(Review.business_id == test_business.id))
@@ -70,6 +71,15 @@ async def test_review_generate(mock_generate_review, client, test_business, test
     assert reviews[0].rating == 5
     assert reviews[0].generated_text == "This is a mocked AI generated review."
     assert "Great service" in reviews[0].customer_notes
+
+
+@pytest.mark.asyncio
+async def test_private_note_routes_are_removed(client, test_business, test_scan):
+    response = client.get(
+        f"/review/{test_business.slug}/private-note-form",
+        params={"scan_id": str(test_scan.id), "review_id": str(test_scan.id), "rating": 5},
+    )
+    assert response.status_code == 404
 
 @pytest.mark.asyncio
 async def test_review_rate_limit(client, test_business, test_scan):

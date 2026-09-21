@@ -142,7 +142,7 @@
     if (hint) {
       if (rating <= 3) {
         hint.innerHTML =
-          "<b>Be as honest as you like</b> — the business wants to hear it. You\u2019ll still be able to post this, and send a private note too.";
+          "<b>Be as honest as you like</b> — use specific details so the draft accurately reflects your experience.";
       } else {
         hint.innerHTML =
           "This becomes the basis of your review \u2014 feel free to add specifics.";

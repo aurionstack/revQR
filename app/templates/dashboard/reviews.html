@@ -6,28 +6,9 @@
 {% block dash_content %}
 <div class="dash-header">
   <h1 class="dash-title">Reviews</h1>
-  <p class="dash-subtitle">All generated reviews &amp; private notes</p>
+  <p class="dash-subtitle">Generated customer review drafts</p>
 </div>
 
-<!-- Reviews Tab / Notes Tab -->
-<div style="display:flex; gap:8px; margin-bottom:24px;">
-  <a
-    href="/dashboard/reviews"
-    class="btn btn-sm btn-inline {{ 'btn-primary' if tab != 'feedback' else 'btn-secondary' }}"
-    style="text-decoration:none;"
-  >
-    Reviews ({{ total_reviews }})
-  </a>
-  <a
-    href="/dashboard/reviews?tab=feedback"
-    class="btn btn-sm btn-inline {{ 'btn-primary' if tab == 'feedback' else 'btn-secondary' }}"
-    style="text-decoration:none;"
-  >
-    Private Notes ({{ total_feedback }})
-  </a>
-</div>
-
-{% if tab != 'feedback' %}
 <!-- Reviews List -->
 <div class="receipt-table">
   <div class="receipt-table-head">
@@ -125,42 +106,4 @@
     </div>
   {% endif %}
 </div>
-
-{% else %}
-<!-- Feedback / Private Notes List -->
-<div class="receipt-table">
-  <div class="receipt-table-head">
-    <div class="receipt-col-sm">Rating</div>
-    <div class="receipt-col">Private Note</div>
-    <div class="receipt-col-md">Date</div>
-  </div>
-
-  {% if feedback_items %}
-    {% for fb in feedback_items %}
-    <div class="receipt-row" style="cursor:pointer;" onclick="this.querySelector('.receipt-text').classList.toggle('receipt-text-expanded')">
-      <div class="receipt-col-sm">
-        {% if fb.rating %}
-          {% set rating = fb.rating %}
-          {% include "components/star_rating.html" %}
-        {% else %}
-          <span class="receipt-time">—</span>
-        {% endif %}
-      </div>
-      <div class="receipt-col">
-        <div class="receipt-text">{{ fb.message }}</div>
-      </div>
-      <div class="receipt-col-md">
-        <span class="receipt-time">{{ fb.created_at | local_time('%b %d') }}</span>
-        <br>
-        <span class="receipt-time">{{ fb.created_at | local_time('%I:%M %p') }}</span>
-      </div>
-    </div>
-    {% endfor %}
-  {% else %}
-    <div class="receipt-empty">
-      <p>No private notes received yet.</p>
-    </div>
-  {% endif %}
-</div>
-{% endif %}
 {% endblock %}

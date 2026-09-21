@@ -61,23 +61,10 @@
     <p>Google does not allow RevQR to preselect stars or fill its review box. Only you can publish your review; we never post it for you.</p>
   </div>
 
-  <div class="private-link-row">
-    <button
-      type="button"
-      class="btn-ghost"
-      hx-get="/review/{{ slug }}/private-note-form?scan_id={{ scan_id }}&review_id={{ review_id }}&rating={{ rating }}"
-      hx-target="#review-stage"
-      hx-swap="innerHTML"
-    >
-      Also send a private note to {{ business_name }} →
-    </button>
-  </div>
-
   <!-- Stamp strip showing progress -->
   <div class="stamp-strip" style="margin-top:24px;">
     <span class="mini-stamp on">✓ {{ rating }}★ rated</span>
     <span class="mini-stamp on">✓ drafted</span>
     <span class="mini-stamp">posted</span>
-    <span class="mini-stamp">private note</span>
   </div>
 </section>

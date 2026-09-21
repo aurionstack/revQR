@@ -67,6 +67,7 @@ def test_public_marketing_pages_are_unique_and_indexable(client, path, canonical
     assert '<meta name="robots" content="index, follow' in response.text
     assert f'<link rel="canonical" href="{settings.APP_URL.rstrip("/")}{canonical_suffix}"' in response.text
     assert response.headers.get("x-robots-tag") is None
+    assert "private feedback" not in response.text.lower()
 
 
 def test_sitemap_and_robots_expose_only_public_marketing_pages(client):

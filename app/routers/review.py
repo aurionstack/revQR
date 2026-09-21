@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Business, Scan, Review, Feedback
+from app.models import Business, Scan, Review
 from app.services.rate_limit import limiter
 from app.services.time import format_local_datetime
 from app.services.ai import generate_review_variations, ReviewVariations, _get_fallback_variations
@@ -293,77 +293,3 @@ async def mark_review_redirected(
     db.add(review)
     await db.commit()
     return {"status": "ok"}
-
-@router.get("/{business_slug}/private-note-form", response_class=HTMLResponse)
-async def get_private_note_form(
-    request: Request, 
-    business_slug: str,
-    scan_id: str,
-    review_id: str,
-    rating: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """Returns the escaped form partial for a private note."""
-    business_result = await db.execute(select(Business).where(Business.slug == business_slug))
-    business = business_result.scalar_one_or_none()
-    scan_uuid = parse_uuid(scan_id, "scan session")
-    review_uuid = parse_uuid(review_id, "review")
-    related_result = await db.execute(select(Review).where(
-        Review.id == review_uuid,
-        Review.business_id == business.id if business else None,
-        Review.scan_id == scan_uuid,
-    ))
-    if not business or not related_result.scalar_one_or_none() or rating not in range(1, 6):
-        raise HTTPException(status_code=400, detail="This review session is no longer valid.")
-    return templates.TemplateResponse(request, "review/private_note_form.html", {
-        "slug": business.slug,
-        "business_name": business.name,
-        "scan_id": scan_id,
-        "review_id": review_id,
-        "rating": rating,
-    })
-
-@router.post("/{business_slug}/private-note", response_class=HTMLResponse)
-@limiter.limit("10/minute")
-async def submit_private_note(
-    request: Request,
-    business_slug: str,
-    scan_id: Annotated[str, Form()],
-    review_id: Annotated[str, Form()],
-    rating: Annotated[int, Form()],
-    message: Annotated[str, Form()],
-    db: AsyncSession = Depends(get_db)
-):
-    """Saves private note and returns Thank You screen."""
-    res = await db.execute(select(Business).filter(Business.slug == business_slug))
-    business = res.scalar_one_or_none()
-    if not business:
-        raise HTTPException(status_code=404, detail="Business not found")
-        
-    if rating not in range(1, 6):
-        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
-    clean_message = message.strip()[:2000]
-    if not clean_message:
-        raise HTTPException(status_code=400, detail="Private note cannot be empty.")
-    scan_uuid = parse_uuid(scan_id, "scan session")
-    review_uuid = parse_uuid(review_id, "review")
-    relation_result = await db.execute(select(Review).where(
-        Review.id == review_uuid,
-        Review.business_id == business.id,
-        Review.scan_id == scan_uuid,
-    ))
-    if not relation_result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="This review session is no longer valid.")
-    new_feedback = Feedback(
-        business_id=business.id,
-        scan_id=scan_uuid,
-        review_id=review_uuid,
-        rating=rating,
-        message=clean_message,
-    )
-    db.add(new_feedback)
-    await db.commit()
-    
-    return templates.TemplateResponse(request, "review/thankyou.html", {
-        "business": business
-    })
