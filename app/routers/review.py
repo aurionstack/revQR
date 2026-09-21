@@ -19,6 +19,7 @@ from app.services.ai import generate_review_variations, ReviewVariations, _get_f
 from app.services.usage import reserve_business_generation
 from app.services.business_context import import_business_context
 from app.services.google_reviews import GoogleReviewLinkError, google_review_destination
+from app.services.review_tags import suggest_review_tags
 from app.config import settings
 from app.main import TEMPLATES_DIR
 
@@ -127,11 +128,12 @@ async def submit_rating(
     if not scan_result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="This review session is no longer valid.")
         
-    chips = []
-    if rating >= 4:
-        chips = ["Great service", "Friendly staff", "Clean", "Fast", "Highly recommend"]
-    else:
-        chips = ["Wait time", "Customer service", "Quality", "Cleanliness", "Pricing"]
+    chips = suggest_review_tags(
+        rating,
+        business_name=business.name,
+        custom_prompt=business.custom_prompt,
+        scraped_context=business.scraped_context,
+    )
         
     return templates.TemplateResponse(request, "review/feedback.html", {
         "slug": business.slug,
