@@ -1555,6 +1555,19 @@ textarea::placeholder {
 .ai-flow-disclosure { background:var(--paper-deep); border:1px solid var(--line); border-radius:12px; }
 .signup-next-steps { padding:14px 16px; margin-bottom:18px; }
 .signup-next-steps p:last-child { color:var(--ink-soft); font-size:12px; line-height:1.55; margin-top:5px; }
+
+.google-auth-btn {
+  width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center;
+  gap: 11px; padding: 11px 16px; border: 1px solid var(--line); border-radius: 10px;
+  background: #fff; color: var(--ink); font-family: "IBM Plex Sans", sans-serif;
+  font-size: 15px; font-weight: 600; text-decoration: none; transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.google-auth-btn:hover { border-color: var(--ink-soft); box-shadow: 0 3px 12px rgba(33,31,27,.08); transform: translateY(-1px); }
+.google-auth-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 2px; }
+.google-auth-btn svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 19px 0; color: var(--ink-soft); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.auth-divider span { white-space: nowrap; }
 .ai-flow-disclosure { margin:18px 0 0; padding:10px 12px; color:var(--ink-soft); font-size:10px; line-height:1.5; }
 .ai-flow-disclosure a { color:inherit; }
 

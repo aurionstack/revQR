@@ -24,6 +24,7 @@ class Business(Base):
     )
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    google_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     google_place_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     brand_color: Mapped[str] = mapped_column(String(7), default="#6366f1")

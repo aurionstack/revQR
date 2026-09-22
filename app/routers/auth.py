@@ -1,6 +1,13 @@
 import uuid
 from datetime import timedelta
 import re
+import hmac
+import secrets
+from urllib.parse import urlencode
+
+import httpx
+import jwt
+from starlette.concurrency import run_in_threadpool
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -29,6 +36,8 @@ from app.services.auth import (
     set_flow_cookie,
     request_cookie,
     delete_cookie_variants,
+    create_google_oauth_state,
+    verify_google_oauth_state,
 )
 import pyotp
 from app.config import settings
@@ -40,6 +49,13 @@ from app.services.rate_limit import limiter
 
 router = APIRouter(tags=["auth"])
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.globals["google_oauth_enabled"] = bool(
+    settings.GOOGLE_OAUTH_CLIENT_ID and settings.GOOGLE_OAUTH_CLIENT_SECRET
+)
+
+GOOGLE_AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 
 def generate_slug(name: str) -> str:
     """Generate a URL-friendly slug from the business name."""
@@ -108,6 +124,141 @@ async def begin_email_flow(
         max_age=15 * 60,
     )
     return response, sent, retry_after
+
+
+def google_redirect_uri() -> str:
+    return f"{settings.APP_URL.rstrip('/')}/auth/google/callback"
+
+
+def verify_google_id_token(raw_token: str, nonce: str) -> dict:
+    """Validate signature and all security-sensitive OIDC claims."""
+    signing_key = jwt.PyJWKClient(GOOGLE_JWKS_URL, cache_keys=True, timeout=10).get_signing_key_from_jwt(raw_token)
+    claims = jwt.decode(
+        raw_token,
+        signing_key.key,
+        algorithms=["RS256"],
+        audience=settings.GOOGLE_OAUTH_CLIENT_ID,
+        issuer=["accounts.google.com", "https://accounts.google.com"],
+        options={"require": ["exp", "iat", "iss", "aud", "sub", "email", "nonce"]},
+    )
+    if not hmac.compare_digest(str(claims.get("nonce", "")), nonce):
+        raise jwt.InvalidTokenError("OIDC nonce mismatch")
+    if claims.get("email_verified") is not True:
+        raise jwt.InvalidTokenError("Google email is not verified")
+    return claims
+
+
+async def exchange_google_code(code: str, nonce: str) -> dict:
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.post(GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+            "client_secret": settings.GOOGLE_OAUTH_CLIENT_SECRET,
+            "redirect_uri": google_redirect_uri(),
+            "grant_type": "authorization_code",
+        })
+        response.raise_for_status()
+        raw_token = response.json().get("id_token")
+        if not raw_token:
+            raise ValueError("Google did not return an identity token")
+    return await run_in_threadpool(verify_google_id_token, raw_token, nonce)
+
+
+@router.get("/auth/google")
+@limiter.limit("20/minute")
+async def google_auth_start(request: Request, mode: str = "login", next: str = ""):
+    if not settings.GOOGLE_OAUTH_CLIENT_ID or not settings.GOOGLE_OAUTH_CLIENT_SECRET:
+        return RedirectResponse(f"/{'signup' if mode == 'signup' else 'login'}?oauth=unavailable", status_code=302)
+    nonce = secrets.token_urlsafe(32)
+    state_token = create_google_oauth_state(mode, safe_next_url(next), nonce)
+    query = urlencode({
+        "client_id": settings.GOOGLE_OAUTH_CLIENT_ID,
+        "redirect_uri": google_redirect_uri(),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state_token,
+        "nonce": nonce,
+        "prompt": "select_account",
+    })
+    response = RedirectResponse(f"{GOOGLE_AUTHORIZATION_URL}?{query}", status_code=302)
+    set_flow_cookie(response, "google_oauth_state", state_token, max_age=600)
+    return response
+
+
+@router.get("/auth/google/callback")
+@limiter.limit("20/minute")
+async def google_auth_callback(
+    request: Request,
+    code: str = "",
+    state: str = "",
+    error: str = "",
+    db: AsyncSession = Depends(get_db),
+):
+    cookie_state = request_cookie(request, "google_oauth_state")
+    state_claims = verify_google_oauth_state(state)
+    fallback = "/signup" if state_claims and state_claims.get("mode") == "signup" else "/login"
+    if error:
+        response = RedirectResponse(f"{fallback}?oauth=cancelled", status_code=302)
+        delete_cookie_variants(response, "google_oauth_state")
+        return response
+    if not code or not state_claims or not cookie_state or not hmac.compare_digest(state, cookie_state):
+        response = RedirectResponse(f"{fallback}?oauth=invalid", status_code=302)
+        delete_cookie_variants(response, "google_oauth_state")
+        return response
+
+    try:
+        claims = await exchange_google_code(code, state_claims["nonce"])
+        email = normalize_email(str(claims["email"]))
+        subject = str(claims["sub"])
+        if not email or not subject:
+            raise ValueError("Incomplete Google identity")
+
+        result = await db.execute(
+            select(Business).where((Business.google_subject == subject) | (Business.email == email))
+        )
+        matches = result.scalars().all()
+        by_subject = next((item for item in matches if item.google_subject == subject), None)
+        by_email = next((item for item in matches if item.email == email), None)
+        if by_subject and by_email and by_subject.id != by_email.id:
+            raise ValueError("Google identity conflicts with an existing account")
+        business = by_subject or by_email
+
+        if business:
+            if not business.is_active:
+                raise ValueError("Account is inactive")
+            if business.google_subject and business.google_subject != subject:
+                raise ValueError("Email is already linked to another Google identity")
+            business.google_subject = subject
+            business.email_verified = True
+        else:
+            display_name = str(claims.get("name") or email.split("@", 1)[0]).strip()[:255]
+            business = Business(
+                name=display_name or "My Business",
+                slug=generate_slug(display_name or "business"),
+                email=email,
+                password_hash=get_password_hash(secrets.token_urlsafe(48)),
+                google_subject=subject,
+                email_verified=True,
+                is_admin=False,
+                has_paid=False,
+            )
+        db.add(business)
+        await db.commit()
+        await db.refresh(business)
+    except (httpx.HTTPError, jwt.PyJWTError, ValueError, KeyError, IntegrityError):
+        await db.rollback()
+        response = RedirectResponse(f"{fallback}?oauth=failed", status_code=302)
+        delete_cookie_variants(response, "google_oauth_state")
+        return response
+
+    next_url = safe_next_url(state_claims.get("next"))
+    if business.is_2fa_enabled:
+        response = RedirectResponse("/login/2fa", status_code=302)
+        set_flow_cookie(response, "pre_auth_token", create_pre_auth_token(str(business.id), next_url), max_age=600)
+    else:
+        response = authenticated_response(business, auth_destination(business, next_url))
+    delete_cookie_variants(response, "google_oauth_state")
+    return response
 
 # ── Signup ────────────────────────────────────────────────────────────────────
 

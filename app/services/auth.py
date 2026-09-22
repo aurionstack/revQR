@@ -133,6 +133,29 @@ def verify_pre_auth_token(token: str) -> Optional[dict]:
         return None
 
 
+def create_google_oauth_state(mode: str, next_url: str = "", nonce: str = "") -> str:
+    """Create a short-lived, signed state value for the Google OIDC round trip."""
+    payload = {
+        **_token_claims(uuid.uuid4().hex, "google_oauth", timedelta(minutes=10)),
+        "mode": "signup" if mode == "signup" else "login",
+        "next": next_url if next_url.startswith("/") and not next_url.startswith("//") else "",
+        "nonce": nonce,
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=TOKEN_ALGORITHM)
+
+
+def verify_google_oauth_state(token: str | None) -> Optional[dict]:
+    if not token:
+        return None
+    try:
+        payload = _decode_token(token, "google_oauth")
+        if payload.get("mode") not in {"login", "signup"} or not payload.get("nonce"):
+            return None
+        return payload
+    except jwt.PyJWTError:
+        return None
+
+
 def create_email_flow_token(business_id: str, purpose: str, next_url: str = "") -> str:
     payload = {
         **_token_claims(str(business_id), "email_flow", timedelta(minutes=15)),

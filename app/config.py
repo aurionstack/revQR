@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     NEW_RELIC_LICENSE_KEY: str = ""
     NEW_RELIC_APP_NAME: str = "revQR Production"
 
+    # Google OpenID Connect. The secret is server-side only; never expose it
+    # in templates or browser JavaScript.
+    GOOGLE_OAUTH_CLIENT_ID: str = ""
+    GOOGLE_OAUTH_CLIENT_SECRET: str = ""
+
     @property
     def cookie_secure(self) -> bool:
         return self.APP_URL.lower().startswith("https://")
