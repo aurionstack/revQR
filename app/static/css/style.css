@@ -1564,7 +1564,7 @@ textarea::placeholder {
 }
 .google-auth-btn:hover { border-color: var(--ink-soft); box-shadow: 0 3px 12px rgba(33,31,27,.08); transform: translateY(-1px); }
 .google-auth-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 2px; }
-.google-auth-btn svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.google-auth-btn > svg { width: 20px !important; height: 20px !important; max-width: 20px !important; max-height: 20px !important; flex: 0 0 20px; display: block; }
 .auth-divider { display: flex; align-items: center; gap: 12px; margin: 19px 0; color: var(--ink-soft); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .auth-divider span { white-space: nowrap; }
